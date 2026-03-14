@@ -65,9 +65,10 @@ export function DummyPaymentActions({
         </Alert>
       ) : null}
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row">
         <Button
           type="button"
+          className="flex-1"
           onClick={() => handleSimulation("succeeded")}
           disabled={isSubmitting}
         >
@@ -76,6 +77,7 @@ export function DummyPaymentActions({
         <Button
           type="button"
           variant="outline"
+          className="flex-1"
           onClick={() => handleSimulation("voided")}
           disabled={isSubmitting}
         >

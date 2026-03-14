@@ -1,12 +1,17 @@
 "use client";
 
-import { RefreshCw } from "lucide-react";
+import { CircleAlert, DatabaseZap } from "lucide-react";
 
+import { NoticeStack } from "@/components/system/notice-stack";
 import type { PhaseTwoWorkspaceData } from "@/lib/services/workspace";
-import { WORKSPACE_TAB_LABELS, type WorkspaceController } from "@/components/workspace/types";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import type { WorkspaceController } from "@/components/workspace/types";
+import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type WorkspaceActionsProps = {
   controller: WorkspaceController;
@@ -17,19 +22,38 @@ export function WorkspaceActions({
   controller,
   data,
 }: WorkspaceActionsProps) {
-  const { feedback, isRefreshing, pendingAction, visibleTabs } = controller.meta;
+  const { feedback } = controller.meta;
+
+  const hasClaimSetupGap = data.providers.length === 0 || data.payers.length === 0;
+
+  if (!feedback && !hasClaimSetupGap) {
+    return null;
+  }
 
   return (
-    <div className="space-y-4">
+    <NoticeStack>
       {feedback ? (
         <Alert variant={feedback.tone === "error" ? "destructive" : "default"}>
+          <CircleAlert className="size-4" />
           <AlertTitle>{feedback.title}</AlertTitle>
           <AlertDescription>{feedback.message}</AlertDescription>
+          <AlertAction>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              onClick={controller.actions.clearFeedback}
+              aria-label="Dismiss feedback"
+            >
+              <span className="text-sm">x</span>
+            </Button>
+          </AlertAction>
         </Alert>
       ) : null}
 
-      {data.providers.length === 0 || data.payers.length === 0 ? (
+      {hasClaimSetupGap ? (
         <Alert>
+          <DatabaseZap className="size-4" />
           <AlertTitle>Claim setup still needs master data</AlertTitle>
           <AlertDescription>
             Add at least one provider and one payer in the Claims tab before
@@ -37,28 +61,6 @@ export function WorkspaceActions({
           </AlertDescription>
         </Alert>
       ) : null}
-
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <TabsList
-          variant="line"
-          className="max-w-full gap-1 overflow-x-auto whitespace-nowrap pb-1"
-        >
-          {visibleTabs.map((tab) => (
-            <TabsTrigger key={tab} value={tab}>
-              {WORKSPACE_TAB_LABELS[tab]}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-        <Button
-          variant="outline"
-          type="button"
-          onClick={controller.actions.refreshWorkspace}
-          disabled={isRefreshing || pendingAction !== null}
-        >
-          <RefreshCw className="size-4" />
-          Refresh
-        </Button>
-      </div>
-    </div>
+    </NoticeStack>
   );
 }

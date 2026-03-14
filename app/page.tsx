@@ -1,18 +1,18 @@
 import { redirect } from "next/navigation";
-import { Activity, DatabaseZap, ShieldCheck, UserRound } from "lucide-react";
+import {
+  Activity,
+  DatabaseZap,
+  ShieldCheck,
+  UserRound,
+  Workflow,
+} from "lucide-react";
 
-import { logoutAction } from "@/app/actions/logout";
+import { PhaseTwoWorkspace } from "@/components/phase-two-workspace";
+import { AppCard, AppCardDescription, AppCardHeader, AppCardTitle } from "@/components/system/card";
 import { PageHeader } from "@/components/system/page-header";
+import { PageShell } from "@/components/system/page-shell";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { PhaseTwoWorkspace } from "@/components/phase-two-workspace";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { getCurrentUserContext } from "@/lib/auth/session";
 import { getPhaseTwoWorkspaceData } from "@/lib/services/workspace";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
@@ -40,6 +40,30 @@ type HomeProps = {
   }>;
 };
 
+function SetupCard({
+  title,
+  description,
+  icon: Icon,
+}: {
+  title: string;
+  description: string;
+  icon: typeof DatabaseZap;
+}) {
+  return (
+    <AppCard className="border-border/70 bg-white/76">
+      <AppCardHeader className="space-y-3 px-5 py-5">
+        <div className="flex size-11 items-center justify-center rounded-2xl bg-secondary text-sky-700 shadow-sm">
+          <Icon className="size-5" />
+        </div>
+        <div className="space-y-1.5">
+          <AppCardTitle>{title}</AppCardTitle>
+          <AppCardDescription>{description}</AppCardDescription>
+        </div>
+      </AppCardHeader>
+    </AppCard>
+  );
+}
+
 export default async function Home({ searchParams }: HomeProps) {
   const config = getSupabaseConfigStatus();
   const params = searchParams ? await searchParams : undefined;
@@ -52,8 +76,8 @@ export default async function Home({ searchParams }: HomeProps) {
 
   if (!config.isConfigured) {
     return (
-      <main className="min-h-screen bg-[linear-gradient(180deg,#f8fbff_0%,#fdf8f3_100%)] px-6 py-10">
-        <div className="mx-auto max-w-4xl space-y-6">
+      <PageShell tone="default">
+        <div className="space-y-6">
           <PageHeader
             eyebrow="Setup Required"
             title="MedFlow Pro is scaffolded and waiting for Supabase"
@@ -62,6 +86,10 @@ export default async function Home({ searchParams }: HomeProps) {
               {
                 label: "Missing env",
                 value: SUPABASE_PUBLIC_ENV_KEYS.join(", "),
+              },
+              {
+                label: "Mode",
+                value: "Pre-auth setup",
               },
             ]}
           />
@@ -75,42 +103,24 @@ export default async function Home({ searchParams }: HomeProps) {
           </Alert>
 
           <div className="grid gap-4 md:grid-cols-3">
-            <Card size="sm" className="border border-slate-200/70 bg-slate-50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DatabaseZap className="size-4 text-sky-700" />
-                  Schema
-                </CardTitle>
-                <CardDescription>
-                  Apply the SQL files in `supabase/migrations/`.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-            <Card size="sm" className="border border-slate-200/70 bg-slate-50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ShieldCheck className="size-4 text-emerald-700" />
-                  Auth hook
-                </CardTitle>
-                <CardDescription>
-                  Set the Supabase custom access token hook.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-            <Card size="sm" className="border border-slate-200/70 bg-slate-50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <UserRound className="size-4 text-amber-700" />
-                  Users
-                </CardTitle>
-                <CardDescription>
-                  Provision an org and at least one admin user.
-                </CardDescription>
-              </CardHeader>
-            </Card>
+            <SetupCard
+              title="Apply schema"
+              description="Run the SQL files in `supabase/migrations/` so the core tables, policies, and triggers exist."
+              icon={DatabaseZap}
+            />
+            <SetupCard
+              title="Configure auth hook"
+              description="Set the Supabase custom access token hook so role and organization context flow into the app."
+              icon={ShieldCheck}
+            />
+            <SetupCard
+              title="Provision users"
+              description="Create an organization and at least one admin user before signing in."
+              icon={UserRound}
+            />
           </div>
         </div>
-      </main>
+      </PageShell>
     );
   }
 
@@ -129,13 +139,36 @@ export default async function Home({ searchParams }: HomeProps) {
     ? await getPhaseTwoWorkspaceData(workspaceSupabase, profile)
     : null;
 
+  if (profile && workspaceData) {
+    return (
+      <PageShell
+        tone="workspace"
+        className="px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5"
+        containerClassName="max-w-none"
+      >
+        <PhaseTwoWorkspace
+          data={workspaceData}
+          initialTab={sanitizedInitialTab}
+          paymentStatus={paymentStatus}
+          organizationName={organization?.name ?? "Unknown organization"}
+          userRole={profile.role}
+          userEmail={authUser.email ?? "No email returned"}
+        />
+      </PageShell>
+    );
+  }
+
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f3faf8_0%,#f7fbff_45%,#fdf8f3_100%)] px-6 py-8">
-      <div className="mx-auto max-w-6xl space-y-6">
+    <PageShell
+      tone="workspace"
+      className="px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5"
+      containerClassName="max-w-none"
+    >
+      <div className="space-y-6">
         <PageHeader
           eyebrow="Operations Workspace"
-          title="MedFlow Pro Phase 4 workspace"
-          description="Manual billing workflows, KPI reporting, demo payments, and admin audit visibility now live together in one operations workspace."
+          title="MedFlow Pro workspace is ready, but the data layer still needs attention"
+          description="Auth is working and the new workspace shell is in place. Resolve the remaining profile or data hydration issue to unlock the full dashboard."
           stats={[
             {
               label: "Organization",
@@ -155,7 +188,7 @@ export default async function Home({ searchParams }: HomeProps) {
               : []),
           ]}
           action={
-            <form action={logoutAction}>
+            <form action="/api/auth/logout" method="post">
               <Button variant="outline" type="submit">
                 Sign out
               </Button>
@@ -172,74 +205,44 @@ export default async function Home({ searchParams }: HomeProps) {
               `role`, then sign in again.
             </AlertDescription>
           </Alert>
-        ) : workspaceData ? (
-          <PhaseTwoWorkspace
-            data={workspaceData}
-            initialTab={sanitizedInitialTab}
-            paymentStatus={paymentStatus}
-            organizationName={organization?.name ?? "Unknown organization"}
-            userRole={profile.role}
+        ) : null}
+
+        <div className="grid gap-4 lg:grid-cols-3">
+          <SetupCard
+            title="Session confirmed"
+            description={`Signed in as ${authUser.email ?? "Unknown user"} with ${profile?.role ?? "unknown"} access.`}
+            icon={UserRound}
           />
-        ) : (
-          <div className="grid gap-4 lg:grid-cols-3">
-            <Card className="border-white/80 bg-white/85 backdrop-blur">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <UserRound className="size-4 text-emerald-700" />
-                  Session
-                </CardTitle>
-                <CardDescription>
-                  The active Supabase Auth account for this browser session.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm text-slate-700">
-                <div>
-                  <p className="font-medium text-slate-950">Email</p>
-                  <p>{authUser.email ?? "No email returned"}</p>
-                </div>
-                <div>
-                  <p className="font-medium text-slate-950">Role</p>
-                  <p>{profile.role}</p>
-                </div>
-              </CardContent>
-            </Card>
+          <SetupCard
+            title="Data hydration"
+            description="The workspace could not fully load org-scoped data. Check RLS, seed data, and table contents before reloading."
+            icon={DatabaseZap}
+          />
+          <SetupCard
+            title="What unlocks next"
+            description="Patients, claims, payments, denials, dashboards, and audit visibility will appear once the org data loads."
+            icon={Workflow}
+          />
+        </div>
 
-            <Card className="border-white/80 bg-white/85 backdrop-blur">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DatabaseZap className="size-4 text-sky-700" />
-                  Data load
-                </CardTitle>
-                <CardDescription>
-                  The workspace could not hydrate org-scoped Phase 4 data.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-slate-700">
-                <p>Check your RLS setup and confirm seed data exists.</p>
-                <p>Then refresh the page and try again.</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-white/80 bg-white/85 backdrop-blur">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="size-4 text-amber-700" />
-                  Next up
-                </CardTitle>
-                <CardDescription>
-                  Once data loads, the Phase 4 operations tabs will appear here.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-slate-700">
-                <p>Patient CRUD with org-scoped queries</p>
-                <p>Manual claim creation and submission flow</p>
-                <p>Demo payment link generation</p>
-                <p>Manual denial capture and resubmission flags</p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        {profile && !workspaceData ? (
+          <AppCard className="border-border/70 bg-white/76">
+            <AppCardHeader className="px-6 py-6">
+              <div className="flex items-start gap-3">
+                <div className="flex size-12 items-center justify-center rounded-2xl bg-secondary text-sky-700 shadow-sm">
+                  <Activity className="size-5" />
+                </div>
+                <div className="space-y-2">
+                  <AppCardTitle className="text-xl">Workspace data load failed</AppCardTitle>
+                  <AppCardDescription>
+                    Confirm the org has patient, claim, payment, denial, and lookup records available under the current policies, then refresh the page.
+                  </AppCardDescription>
+                </div>
+              </div>
+            </AppCardHeader>
+          </AppCard>
+        ) : null}
       </div>
-    </main>
+    </PageShell>
   );
 }

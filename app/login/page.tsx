@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 
-import { loginAction } from "@/app/login/actions";
 import { AuthShell } from "@/components/auth-shell";
+import { FormField } from "@/components/system/form-field";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   SUPABASE_PUBLIC_ENV_KEYS,
   getSupabaseConfigStatus,
@@ -61,9 +60,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </Alert>
       ) : null}
 
-      <form action={loginAction} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">Work email</Label>
+      <form action="/api/auth/login" method="post" className="space-y-5">
+        <FormField label="Work email" htmlFor="email">
           <Input
             id="email"
             name="email"
@@ -72,10 +70,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             placeholder="biller@medflowpro.com"
             required
           />
-        </div>
+        </FormField>
 
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+        <FormField label="Password" htmlFor="password">
           <Input
             id="password"
             name="password"
@@ -84,13 +81,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             placeholder="Enter your password"
             required
           />
-        </div>
+        </FormField>
 
-        <Button
-          className="h-10 w-full bg-slate-950 text-white hover:bg-slate-800"
-          type="submit"
-          disabled={!config.isConfigured}
-        >
+        <Button className="w-full" size="lg" type="submit" disabled={!config.isConfigured}>
           Sign in
         </Button>
       </form>

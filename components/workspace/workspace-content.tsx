@@ -8,7 +8,6 @@ import { DenialsSection } from "@/components/workspace/sections/denials-section"
 import { PatientsSection } from "@/components/workspace/sections/patients-section";
 import { PaymentsSection } from "@/components/workspace/sections/payments-section";
 import type { WorkspaceController } from "@/components/workspace/types";
-import { WorkspaceActions } from "@/components/workspace/workspace-actions";
 import type { PhaseTwoWorkspaceData } from "@/lib/services/workspace";
 
 type WorkspaceContentProps = {
@@ -28,10 +27,8 @@ export function WorkspaceContent({
     <Tabs
       value={controller.meta.activeTab}
       onValueChange={controller.actions.setActiveTab}
-      className="space-y-4"
+      className="space-y-6"
     >
-      <WorkspaceActions controller={controller} data={data} />
-
       <TabsContent value="dashboard" className="space-y-4">
         <DashboardSection
           controller={controller}

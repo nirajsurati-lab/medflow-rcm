@@ -18,7 +18,13 @@ export function StatusBadge({
   className,
 }: StatusBadgeProps) {
   return (
-    <Badge variant={getStatusVariant(status)} className={cn(className)}>
+    <Badge
+      variant={getStatusVariant(status)}
+      className={cn(
+        "h-auto rounded-full px-2.5 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.16em]",
+        className
+      )}
+    >
       {label ?? formatStatusLabel(status)}
     </Badge>
   );

@@ -11,12 +11,12 @@ import {
 } from "recharts";
 
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  AppCard,
+  AppCardContent,
+  AppCardDescription,
+  AppCardHeader,
+  AppCardTitle,
+} from "@/components/system/card";
 import type { DashboardAgingBucket } from "@/lib/services/workspace";
 
 type ARAgingChartProps = {
@@ -33,14 +33,14 @@ function formatCurrency(value: number) {
 
 export function ARAgingChart({ data }: ARAgingChartProps) {
   return (
-    <Card className="border-white/80 bg-white/90 backdrop-blur">
-      <CardHeader>
-        <CardTitle>A/R aging</CardTitle>
-        <CardDescription>
+    <AppCard className="overflow-hidden border-border/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(238,248,255,0.78))]">
+      <AppCardHeader className="border-b border-border/60 px-6 py-5">
+        <AppCardTitle className="text-xl">A/R aging</AppCardTitle>
+        <AppCardDescription>
           Outstanding claim balance grouped by age bucket.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </AppCardDescription>
+      </AppCardHeader>
+      <AppCardContent className="px-6 py-6">
         <div className="h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
@@ -49,7 +49,11 @@ export function ARAgingChart({ data }: ARAgingChartProps) {
               margin={{ top: 8, right: 12, left: 0, bottom: 8 }}
               accessibilityLayer
             >
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
+              <CartesianGrid
+                vertical={false}
+                strokeDasharray="3 3"
+                stroke="rgba(148, 163, 184, 0.32)"
+              />
               <XAxis
                 dataKey="label"
                 tickLine={false}
@@ -64,7 +68,13 @@ export function ARAgingChart({ data }: ARAgingChartProps) {
                 width={88}
               />
               <Tooltip
-                cursor={{ fill: "rgba(148, 163, 184, 0.12)" }}
+                cursor={{ fill: "rgba(56, 189, 248, 0.08)" }}
+                contentStyle={{
+                  borderRadius: 20,
+                  border: "1px solid rgba(203, 213, 225, 0.75)",
+                  boxShadow: "0 24px 60px -32px rgba(15, 23, 42, 0.45)",
+                  background: "rgba(255, 255, 255, 0.94)",
+                }}
                 formatter={(value, name) => {
                   const numericValue =
                     typeof value === "number" ? value : Number(value ?? 0);
@@ -80,13 +90,13 @@ export function ARAgingChart({ data }: ARAgingChartProps) {
               <Bar
                 dataKey="amount"
                 name="amount"
-                fill="#0f766e"
+                fill="#0f6ecd"
                 radius={[10, 10, 4, 4]}
               />
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </CardContent>
-    </Card>
+      </AppCardContent>
+    </AppCard>
   );
 }

@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 
-import { signupAction } from "@/app/signup/actions";
 import { AuthShell } from "@/components/auth-shell";
+import { FormField } from "@/components/system/form-field";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   SUPABASE_PUBLIC_ENV_KEYS,
   getSupabaseConfigStatus,
@@ -64,30 +63,26 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
         </Alert>
       ) : null}
 
-      <form action={signupAction} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="organization_name">Organization name</Label>
+      <form action="/api/auth/signup" method="post" className="space-y-5">
+        <FormField label="Organization name" htmlFor="organization_name">
           <Input
             id="organization_name"
             name="organization_name"
             placeholder="Northwind Medical Group"
             required
           />
-        </div>
+        </FormField>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="first_name">First name</Label>
+          <FormField label="First name" htmlFor="first_name">
             <Input id="first_name" name="first_name" required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="last_name">Last name</Label>
+          </FormField>
+          <FormField label="Last name" htmlFor="last_name">
             <Input id="last_name" name="last_name" required />
-          </div>
+          </FormField>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="email">Work email</Label>
+        <FormField label="Work email" htmlFor="email">
           <Input
             id="email"
             name="email"
@@ -96,11 +91,10 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
             placeholder="admin@medflowpro.com"
             required
           />
-        </div>
+        </FormField>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+          <FormField label="Password" htmlFor="password">
             <Input
               id="password"
               name="password"
@@ -109,9 +103,8 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
               minLength={8}
               required
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirm_password">Confirm password</Label>
+          </FormField>
+          <FormField label="Confirm password" htmlFor="confirm_password">
             <Input
               id="confirm_password"
               name="confirm_password"
@@ -120,14 +113,10 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
               minLength={8}
               required
             />
-          </div>
+          </FormField>
         </div>
 
-        <Button
-          className="h-10 w-full bg-slate-950 text-white hover:bg-slate-800"
-          type="submit"
-          disabled={!canSubmit}
-        >
+        <Button className="w-full" size="lg" type="submit" disabled={!canSubmit}>
           Create workspace
         </Button>
       </form>

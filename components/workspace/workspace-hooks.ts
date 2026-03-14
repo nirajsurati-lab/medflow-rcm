@@ -3,13 +3,6 @@
 import type { FormEvent } from "react";
 import { useDeferredValue, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Activity,
-  BadgeDollarSign,
-  History,
-  ReceiptText,
-  Users,
-} from "lucide-react";
 
 import type {
   ClaimDiagnosisState,
@@ -27,6 +20,7 @@ import type {
 } from "@/components/workspace/types";
 import {
   ALL_WORKSPACE_TABS,
+  WORKSPACE_TAB_META,
 } from "@/components/workspace/types";
 import {
   buildPatientPayload,
@@ -139,42 +133,14 @@ export function useWorkspaceController({
     data.audit_logs.find((log) => log.id === selectedAuditLogId) ??
     data.audit_logs[0] ??
     null;
-  const quickNavItems = [
-    {
-      tab: "patients" as const,
-      title: "Patients",
-      description: "Manage demographics and roster updates.",
-      icon: Users,
-    },
-    {
-      tab: "claims" as const,
-      title: "Claims",
-      description: "Draft claims and complete submissions.",
-      icon: ReceiptText,
-    },
-    {
-      tab: "payments" as const,
-      title: "Payments",
-      description: "Generate demo checkout links and track outcomes.",
-      icon: BadgeDollarSign,
-    },
-    {
-      tab: "denials" as const,
-      title: "Denials",
-      description: "Log payer feedback and follow-up work.",
-      icon: Activity,
-    },
-    ...(userRole === "admin"
-      ? [
-          {
-            tab: "audit" as const,
-            title: "Audit",
-            description: "Review admin-only activity history.",
-            icon: History,
-          },
-        ]
-      : []),
-  ];
+  const quickNavItems = visibleTabs
+    .filter((tab) => tab !== "dashboard")
+    .map((tab) => ({
+      tab,
+      title: WORKSPACE_TAB_META[tab].label,
+      description: WORKSPACE_TAB_META[tab].description,
+      icon: WORKSPACE_TAB_META[tab].icon,
+    }));
 
   function refreshWorkspace() {
     startTransition(() => {
@@ -261,10 +227,6 @@ export function useWorkspaceController({
   }
 
   async function handlePatientDelete(patient: PatientRow) {
-    if (!window.confirm(`Delete patient ${patient.first_name} ${patient.last_name}?`)) {
-      return;
-    }
-
     clearFeedback();
     setPendingAction(`delete-patient-${patient.id}`);
 

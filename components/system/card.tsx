@@ -18,7 +18,7 @@ export function AppCard({
   return (
     <Card
       className={cn(
-        "border-white/80 bg-white/90 shadow-sm shadow-slate-200/70 backdrop-blur",
+        "border-border/60 bg-white/78 shadow-[0_24px_70px_-38px_rgba(15,23,42,0.38)] backdrop-blur-xl",
         className
       )}
       {...props}

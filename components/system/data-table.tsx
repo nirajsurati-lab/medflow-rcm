@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
-type DataTableColumn = {
+export type DataTableColumn = {
   key: string;
   label: string;
   className?: string;
@@ -36,32 +36,34 @@ export function DataTable<Row>({
   emptyClassName,
 }: DataTableProps<Row>) {
   return (
-    <Table className={className}>
-      <TableHeader>
-        <TableRow>
-          {columns.map((column) => (
-            <TableHead key={column.key} className={column.className}>
-              {column.label}
-            </TableHead>
-          ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.length > 0 ? (
-          rows.map((row) => (
-            <Fragment key={getRowKey(row)}>{renderRow(row)}</Fragment>
-          ))
-        ) : (
+    <div className="overflow-hidden rounded-[26px] border border-border/70 bg-white/65 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
+      <Table className={className}>
+        <TableHeader>
           <TableRow>
-            <TableCell
-              colSpan={columns.length}
-              className={cn("py-8 text-center text-slate-500", emptyClassName)}
-            >
-              {emptyMessage}
-            </TableCell>
+            {columns.map((column) => (
+              <TableHead key={column.key} className={column.className}>
+                {column.label}
+              </TableHead>
+            ))}
           </TableRow>
-        )}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {rows.length > 0 ? (
+            rows.map((row) => (
+              <Fragment key={getRowKey(row)}>{renderRow(row)}</Fragment>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell
+                colSpan={columns.length}
+                className={cn("py-12 text-center text-muted-foreground", emptyClassName)}
+              >
+                {emptyMessage}
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </div>
   );
 }

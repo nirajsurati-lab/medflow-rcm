@@ -1,5 +1,13 @@
 import type { FormEvent } from "react";
-import type { LucideIcon } from "lucide-react";
+import {
+  Activity,
+  BadgeDollarSign,
+  History,
+  LayoutDashboard,
+  ReceiptText,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 import type { PhaseTwoWorkspaceData } from "@/lib/services/workspace";
 
@@ -29,6 +37,52 @@ export const WORKSPACE_TAB_LABELS: Record<WorkspaceTab, string> = {
   audit: "Audit",
 };
 
+export const WORKSPACE_TAB_META: Record<
+  WorkspaceTab,
+  {
+    label: string;
+    description: string;
+    icon: LucideIcon;
+  }
+> = {
+  dashboard: {
+    label: "Dashboard",
+    description:
+      "Track revenue health, A/R aging, and the highest-priority work across your billing operations.",
+    icon: LayoutDashboard,
+  },
+  patients: {
+    label: "Patients",
+    description:
+      "Maintain the patient roster, demographics, and insurance identifiers used throughout the workflow.",
+    icon: Users,
+  },
+  claims: {
+    label: "Claims",
+    description:
+      "Draft claims, enrich payer setup, and push billing work through the submission queue.",
+    icon: ReceiptText,
+  },
+  payments: {
+    label: "Payments",
+    description:
+      "Create internal demo checkout links and keep patient payment attempts visible to the team.",
+    icon: BadgeDollarSign,
+  },
+  denials: {
+    label: "Denials",
+    description:
+      "Capture payer feedback, track appeal timing, and keep denial follow-up organized.",
+    icon: Activity,
+  },
+  audit: {
+    label: "Audit",
+    description:
+      "Review admin-only activity history and inspect before-and-after payload changes.",
+    icon: History,
+  },
+};
+
 export type PatientRow = PhaseTwoWorkspaceData["patients"][number];
 export type ClaimRow = PhaseTwoWorkspaceData["claims"][number];
 export type PaymentRow = PhaseTwoWorkspaceData["payments"][number];
@@ -40,6 +94,7 @@ export type PhaseTwoWorkspaceProps = {
   paymentStatus: string | null;
   organizationName: string;
   userRole: string;
+  userEmail: string;
 };
 
 export type FeedbackState = {
