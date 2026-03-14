@@ -21,7 +21,14 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const validTabs = new Set(["dashboard", "patients", "claims", "payments", "denials"]);
+const validTabs = new Set([
+  "dashboard",
+  "patients",
+  "claims",
+  "payments",
+  "denials",
+  "audit",
+]);
 
 type HomeProps = {
   searchParams?: Promise<{
@@ -112,7 +119,9 @@ export default async function Home({ searchParams }: HomeProps) {
   }
 
   const { authUser, organization, profile } = userContext;
-  const workspaceData = profile ? await getPhaseTwoWorkspaceData() : null;
+  const sanitizedInitialTab =
+    params?.tab === "audit" && profile?.role !== "admin" ? "dashboard" : initialTab;
+  const workspaceData = profile ? await getPhaseTwoWorkspaceData(profile.role) : null;
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f3faf8_0%,#f7fbff_45%,#fdf8f3_100%)] px-6 py-8">
@@ -148,7 +157,7 @@ export default async function Home({ searchParams }: HomeProps) {
         ) : workspaceData ? (
           <PhaseTwoWorkspace
             data={workspaceData}
-            initialTab={initialTab}
+            initialTab={sanitizedInitialTab}
             paymentStatus={paymentStatus}
             organizationName={organization?.name ?? "Unknown organization"}
             userRole={profile.role}
@@ -184,7 +193,7 @@ export default async function Home({ searchParams }: HomeProps) {
                   Data load
                 </CardTitle>
                 <CardDescription>
-                  The workspace could not hydrate org-scoped Phase 2 data.
+                  The workspace could not hydrate org-scoped Phase 4 data.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-slate-700">
@@ -200,7 +209,7 @@ export default async function Home({ searchParams }: HomeProps) {
                   Next up
                 </CardTitle>
                 <CardDescription>
-                  Once data loads, the Phase 2 operations tabs will appear here.
+                  Once data loads, the Phase 4 operations tabs will appear here.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-slate-700">

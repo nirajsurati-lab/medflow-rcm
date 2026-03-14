@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getInternalRequestContext } from "@/lib/auth/context";
+import { apiErrorResponse, invalidPayloadResponse } from "@/lib/http/api-errors";
 import { createProvider } from "@/lib/services/lookups";
 import { providerSchema } from "@/lib/validators/provider";
 
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
   const parsed = providerSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid provider payload." }, { status: 400 });
+    return invalidPayloadResponse("Invalid provider payload.", parsed.error);
   }
 
   try {
@@ -26,9 +27,6 @@ export async function POST(request: NextRequest) {
     );
     return NextResponse.json({ data: provider }, { status: 201 });
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to create provider." },
-      { status: 500 }
-    );
+    return apiErrorResponse(error, "Unable to create provider.");
   }
 }

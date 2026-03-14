@@ -30,11 +30,15 @@ export function DummyPaymentActions({
         body: JSON.stringify({ status }),
       });
       const result = (await response.json().catch(() => null)) as
-        | { error?: string }
+        | { error?: string; details?: string[] }
         | null;
 
       if (!response.ok) {
-        throw new Error(result?.error ?? "Unable to simulate payment.");
+        throw new Error(
+          [result?.error ?? "Unable to simulate payment.", ...(result?.details ?? [])]
+            .filter(Boolean)
+            .join(" ")
+        );
       }
 
       router.push(

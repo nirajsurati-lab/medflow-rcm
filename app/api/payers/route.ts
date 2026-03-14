@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getInternalRequestContext } from "@/lib/auth/context";
+import { apiErrorResponse, invalidPayloadResponse } from "@/lib/http/api-errors";
 import { createPayer } from "@/lib/services/lookups";
 import { payerSchema } from "@/lib/validators/payer";
 
@@ -15,16 +16,13 @@ export async function POST(request: NextRequest) {
   const parsed = payerSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payer payload." }, { status: 400 });
+    return invalidPayloadResponse("Invalid payer payload.", parsed.error);
   }
 
   try {
     const payer = await createPayer(context.supabase, context.profile, parsed.data);
     return NextResponse.json({ data: payer }, { status: 201 });
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to create payer." },
-      { status: 500 }
-    );
+    return apiErrorResponse(error, "Unable to create payer.");
   }
 }

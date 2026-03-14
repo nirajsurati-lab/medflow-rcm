@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getInternalRequestContext } from "@/lib/auth/context";
+import { apiErrorResponse } from "@/lib/http/api-errors";
 import { submitClaim } from "@/lib/services/claims";
 
 type RouteContext = {
@@ -24,9 +25,6 @@ export async function PATCH(_: NextRequest, context: RouteContext) {
     const claim = await submitClaim(authContext.supabase, id);
     return NextResponse.json({ data: claim }, { status: 200 });
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to submit claim." },
-      { status: 500 }
-    );
+    return apiErrorResponse(error, "Unable to submit claim.");
   }
 }

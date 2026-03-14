@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getInternalRequestContext } from "@/lib/auth/context";
+import { apiErrorResponse, invalidPayloadResponse } from "@/lib/http/api-errors";
 import {
   deletePatient,
   getPatientById,
@@ -29,10 +30,7 @@ export async function GET(_: NextRequest, context: RouteContext) {
     const patient = await getPatientById(authContext.supabase, id);
     return NextResponse.json({ data: patient }, { status: 200 });
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to load patient." },
-      { status: 500 }
-    );
+    return apiErrorResponse(error, "Unable to load patient.");
   }
 }
 
@@ -50,7 +48,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   const parsed = patientSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid patient payload." }, { status: 400 });
+    return invalidPayloadResponse("Invalid patient payload.", parsed.error);
   }
 
   try {
@@ -58,10 +56,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const patient = await updatePatient(authContext.supabase, id, parsed.data);
     return NextResponse.json({ data: patient }, { status: 200 });
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to update patient." },
-      { status: 500 }
-    );
+    return apiErrorResponse(error, "Unable to update patient.");
   }
 }
 
@@ -80,9 +75,6 @@ export async function DELETE(_: NextRequest, context: RouteContext) {
     await deletePatient(authContext.supabase, id);
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to delete patient." },
-      { status: 500 }
-    );
+    return apiErrorResponse(error, "Unable to delete patient.");
   }
 }

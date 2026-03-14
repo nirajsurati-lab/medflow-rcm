@@ -7,6 +7,7 @@ import {
   Activity,
   BadgeDollarSign,
   ChartColumnIncreasing,
+  History,
   Plus,
   ReceiptText,
   RefreshCw,
@@ -121,7 +122,7 @@ type DenialFormState = {
   appeal_deadline: string;
 };
 
-const TABS = ["dashboard", "patients", "claims", "payments", "denials"] as const;
+const TABS = ["dashboard", "patients", "claims", "payments", "denials", "audit"] as const;
 
 const emptyPatientForm = (): PatientFormState => ({
   first_name: "",
@@ -307,11 +308,21 @@ async function requestJson<T>(
     },
   });
   const result = (await response.json().catch(() => null)) as
-    | { data?: T; error?: string; url?: string; success?: boolean }
+    | {
+        data?: T;
+        error?: string;
+        details?: string[];
+        url?: string;
+        success?: boolean;
+      }
     | null;
 
   if (!response.ok) {
-    throw new Error(result?.error ?? "Request failed.");
+    throw new Error(
+      [result?.error ?? "Request failed.", ...(result?.details ?? [])]
+        .filter(Boolean)
+        .join(" ")
+    );
   }
 
   return {
@@ -330,8 +341,10 @@ export function PhaseTwoWorkspace({
 }: PhaseTwoWorkspaceProps) {
   const router = useRouter();
   const [isRefreshing, startTransition] = useTransition();
+  const visibleTabs: readonly string[] =
+    userRole === "admin" ? TABS : TABS.filter((tab) => tab !== "audit");
   const [activeTab, setActiveTab] = useState(
-    TABS.includes(initialTab as (typeof TABS)[number]) ? initialTab : "patients"
+    visibleTabs.includes(initialTab) ? initialTab : "dashboard"
   );
   const [feedback, setFeedback] = useState<FeedbackState>(
     paymentStatus === "success"
@@ -361,6 +374,9 @@ export function PhaseTwoWorkspace({
   const [paymentForm, setPaymentForm] = useState<PaymentFormState>(emptyPaymentForm);
   const [denialForm, setDenialForm] = useState<DenialFormState>(emptyDenialForm);
   const [latestPaymentLink, setLatestPaymentLink] = useState<string | null>(null);
+  const [selectedAuditLogId, setSelectedAuditLogId] = useState<string | null>(
+    data.audit_logs[0]?.id ?? null
+  );
 
   const query = deferredPatientSearch.trim().toLowerCase();
   const filteredPatients = !query
@@ -387,6 +403,10 @@ export function PhaseTwoWorkspace({
     label: `${claim.patient_name} · ${formatCurrency(claim.total_amount)} · ${claim.status}`,
   }));
   const queuePreview = data.dashboard.claims_queue.slice(0, 3);
+  const selectedAuditLog =
+    data.audit_logs.find((log) => log.id === selectedAuditLogId) ??
+    data.audit_logs[0] ??
+    null;
 
   function refreshWorkspace() {
     startTransition(() => {
@@ -765,6 +785,9 @@ export function PhaseTwoWorkspace({
             <TabsTrigger value="claims">Claims</TabsTrigger>
             <TabsTrigger value="payments">Payments</TabsTrigger>
             <TabsTrigger value="denials">Denials</TabsTrigger>
+            {userRole === "admin" ? (
+              <TabsTrigger value="audit">Audit</TabsTrigger>
+            ) : null}
           </TabsList>
           <Button
             variant="outline"
@@ -2091,6 +2114,145 @@ export function PhaseTwoWorkspace({
             </Card>
           </div>
         </TabsContent>
+
+        {userRole === "admin" ? (
+          <TabsContent value="audit" className="space-y-4">
+            <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+              <Card className="border-white/80 bg-white/90 backdrop-blur">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <History className="size-4 text-slate-700" />
+                    Audit log
+                  </CardTitle>
+                  <CardDescription>
+                    Admin-only activity history captured by database audit triggers.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Time</TableHead>
+                        <TableHead>Actor</TableHead>
+                        <TableHead>Action</TableHead>
+                        <TableHead>Table</TableHead>
+                        <TableHead>Summary</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {data.audit_logs.length > 0 ? (
+                        data.audit_logs.map((log) => (
+                          <TableRow
+                            key={log.id}
+                            className={
+                              selectedAuditLog?.id === log.id
+                                ? "bg-slate-50"
+                                : undefined
+                            }
+                            onClick={() => setSelectedAuditLogId(log.id)}
+                          >
+                            <TableCell>{formatDateTime(log.created_at)}</TableCell>
+                            <TableCell className="max-w-xs truncate">
+                              {log.actor_name}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{log.action}</Badge>
+                            </TableCell>
+                            <TableCell>{log.table_name}</TableCell>
+                            <TableCell className="max-w-sm truncate">
+                              {log.summary}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={5} className="py-8 text-center text-slate-500">
+                            No audit logs available yet.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              <Card className="border-white/80 bg-white/90 backdrop-blur">
+                <CardHeader>
+                  <CardTitle>Audit detail</CardTitle>
+                  <CardDescription>
+                    Review the selected row and its before/after payloads.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {selectedAuditLog ? (
+                    <>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="rounded-xl bg-slate-50 p-4">
+                          <p className="text-sm text-slate-600">Actor</p>
+                          <p className="mt-1 font-medium text-slate-950">
+                            {selectedAuditLog.actor_name}
+                          </p>
+                        </div>
+                        <div className="rounded-xl bg-slate-50 p-4">
+                          <p className="text-sm text-slate-600">Record</p>
+                          <p className="mt-1 break-all font-mono text-xs text-slate-700">
+                            {selectedAuditLog.record_id}
+                          </p>
+                        </div>
+                        <div className="rounded-xl bg-slate-50 p-4">
+                          <p className="text-sm text-slate-600">Operation</p>
+                          <p className="mt-1 font-medium text-slate-950">
+                            {selectedAuditLog.action} on {selectedAuditLog.table_name}
+                          </p>
+                        </div>
+                        <div className="rounded-xl bg-slate-50 p-4">
+                          <p className="text-sm text-slate-600">Changed fields</p>
+                          <p className="mt-1 text-slate-950">
+                            {selectedAuditLog.changed_fields.length > 0
+                              ? selectedAuditLog.changed_fields.join(", ")
+                              : "No top-level field diff captured"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="audit-old-data">Old data</Label>
+                        <Textarea
+                          id="audit-old-data"
+                          readOnly
+                          rows={10}
+                          value={
+                            selectedAuditLog.old_data
+                              ? JSON.stringify(selectedAuditLog.old_data, null, 2)
+                              : "null"
+                          }
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="audit-new-data">New data</Label>
+                        <Textarea
+                          id="audit-new-data"
+                          readOnly
+                          rows={10}
+                          value={
+                            selectedAuditLog.new_data
+                              ? JSON.stringify(selectedAuditLog.new_data, null, 2)
+                              : "null"
+                          }
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-slate-200 p-6 text-sm text-slate-500">
+                      Select an audit row to inspect its details.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        ) : null}
       </Tabs>
     </div>
   );

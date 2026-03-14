@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getInternalRequestContext } from "@/lib/auth/context";
+import { apiErrorResponse, invalidPayloadResponse } from "@/lib/http/api-errors";
 import { createPatient, listPatients } from "@/lib/services/patients";
 import { patientSchema } from "@/lib/validators/patient";
 
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
   const parsed = patientSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid patient payload." }, { status: 400 });
+    return invalidPayloadResponse("Invalid patient payload.", parsed.error);
   }
 
   try {
@@ -45,9 +46,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ data: patient }, { status: 201 });
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to create patient." },
-      { status: 500 }
-    );
+    return apiErrorResponse(error, "Unable to create patient.");
   }
 }

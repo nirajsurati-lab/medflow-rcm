@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getInternalRequestContext } from "@/lib/auth/context";
+import { apiErrorResponse, invalidPayloadResponse } from "@/lib/http/api-errors";
 import { createCheckoutPaymentLink } from "@/lib/services/payments";
 import { paymentLinkSchema } from "@/lib/validators/payment";
 
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
   const parsed = paymentLinkSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payment payload." }, { status: 400 });
+    return invalidPayloadResponse("Invalid payment payload.", parsed.error);
   }
 
   try {
@@ -30,14 +31,6 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to create payment link.",
-      },
-      { status: 500 }
-    );
+    return apiErrorResponse(error, "Unable to create payment link.");
   }
 }

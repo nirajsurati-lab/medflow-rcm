@@ -24,6 +24,11 @@ Phase 1 sets up:
 
 Phase 2 uses an internal demo payment page so the project can be shown without any gateway onboarding or verification.
 
+## Deployment And Testing Guides
+
+- Deployment: `docs/vercel-deployment-guide.md`
+- App walkthrough and test flow: `docs/application-test-guide.md`
+
 ## Scripts
 
 - `npm run dev` starts the local Next.js server.

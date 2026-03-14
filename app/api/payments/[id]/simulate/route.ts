@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getInternalRequestContext } from "@/lib/auth/context";
+import { apiErrorResponse } from "@/lib/http/api-errors";
 import { simulatePaymentStatus } from "@/lib/services/payments";
 
 type RouteContext = {
@@ -38,14 +39,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     return NextResponse.json({ data: payment }, { status: 200 });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to update payment status.",
-      },
-      { status: 500 }
-    );
+    return apiErrorResponse(error, "Unable to update payment status.");
   }
 }

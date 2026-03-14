@@ -1,3 +1,4 @@
+import { listAuditLogs, type AuditLogSummary } from "@/lib/services/audit-logs";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { listClaims, type ClaimSummary } from "@/lib/services/claims";
 import { listDenials, type DenialSummary } from "@/lib/services/denials";
@@ -39,6 +40,7 @@ export type PhaseTwoWorkspaceData = {
   denials: DenialSummary[];
   payments: PaymentSummary[];
   dashboard: DashboardSummary;
+  audit_logs: AuditLogSummary[];
 };
 
 function getDaysOpen(dateValue: string) {
@@ -166,9 +168,11 @@ function buildDashboardSummary(
   };
 }
 
-export async function getPhaseTwoWorkspaceData(): Promise<PhaseTwoWorkspaceData> {
+export async function getPhaseTwoWorkspaceData(
+  role: string
+): Promise<PhaseTwoWorkspaceData> {
   const supabase = await createServerSupabaseClient();
-  const [patients, providers, payers, claims, denials, payments] =
+  const [patients, providers, payers, claims, denials, payments, auditLogs] =
     await Promise.all([
       listPatients(supabase),
       listProviders(supabase),
@@ -176,6 +180,7 @@ export async function getPhaseTwoWorkspaceData(): Promise<PhaseTwoWorkspaceData>
       listClaims(supabase),
       listDenials(supabase),
       listPayments(supabase),
+      role === "admin" ? listAuditLogs(supabase) : Promise.resolve([]),
     ]);
   const dashboard = buildDashboardSummary(claims, payments, denials);
 
@@ -187,5 +192,6 @@ export async function getPhaseTwoWorkspaceData(): Promise<PhaseTwoWorkspaceData>
     denials,
     payments,
     dashboard,
+    audit_logs: auditLogs,
   };
 }
