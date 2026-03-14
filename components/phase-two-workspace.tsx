@@ -6,17 +6,16 @@ import { useRouter } from "next/navigation";
 import {
   Activity,
   BadgeDollarSign,
-  ClipboardList,
-  FileWarning,
+  ChartColumnIncreasing,
   Plus,
   ReceiptText,
   RefreshCw,
   Save,
   Trash2,
-  UserRoundPlus,
 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ARAgingChart } from "@/components/ar-aging-chart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -122,7 +121,7 @@ type DenialFormState = {
   appeal_deadline: string;
 };
 
-const TABS = ["patients", "claims", "payments", "denials"] as const;
+const TABS = ["dashboard", "patients", "claims", "payments", "denials"] as const;
 
 const emptyPatientForm = (): PatientFormState => ({
   first_name: "",
@@ -212,6 +211,20 @@ function formatDateTime(value: string | null) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function formatMetricValue(
+  metric: PhaseTwoWorkspaceData["dashboard"]["kpis"][number]
+) {
+  if (metric.kind === "currency") {
+    return formatCurrency(metric.value);
+  }
+
+  if (metric.kind === "percent") {
+    return `${metric.value.toFixed(1)}%`;
+  }
+
+  return new Intl.NumberFormat("en-US").format(metric.value);
 }
 
 function getAddressFields(address: PatientRow["address"]) {
@@ -373,13 +386,7 @@ export function PhaseTwoWorkspace({
     id: claim.id,
     label: `${claim.patient_name} · ${formatCurrency(claim.total_amount)} · ${claim.status}`,
   }));
-
-  const operationsCount = {
-    patients: data.patients.length,
-    claims: data.claims.length,
-    denials: data.denials.length,
-    payments: data.payments.length,
-  };
+  const queuePreview = data.dashboard.claims_queue.slice(0, 3);
 
   function refreshWorkspace() {
     startTransition(() => {
@@ -711,66 +718,22 @@ export function PhaseTwoWorkspace({
   return (
     <div className="space-y-6">
       <div className="grid gap-4 xl:grid-cols-4">
-        <Card className="border-white/80 bg-white/90 backdrop-blur">
-          <CardHeader className="space-y-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Activity className="size-4 text-emerald-700" />
-              Workspace
-            </CardTitle>
-            <CardDescription>
-              Operational phase for {organizationName}.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-1 text-sm text-slate-700">
-            <p className="font-medium text-slate-950">{userRole}</p>
-            <p>manual entry only</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-white/80 bg-white/90 backdrop-blur">
-          <CardHeader className="space-y-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <UserRoundPlus className="size-4 text-sky-700" />
-              Patients
-            </CardTitle>
-            <CardDescription>Captured and ready for billing.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold text-slate-950">
-              {operationsCount.patients}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-white/80 bg-white/90 backdrop-blur">
-          <CardHeader className="space-y-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ClipboardList className="size-4 text-amber-700" />
-              Claims
-            </CardTitle>
-            <CardDescription>Drafts plus submitted claims.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold text-slate-950">
-              {operationsCount.claims}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-white/80 bg-white/90 backdrop-blur">
-          <CardHeader className="space-y-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <FileWarning className="size-4 text-rose-700" />
-              Denials
-            </CardTitle>
-            <CardDescription>Manual denial capture queue.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold text-slate-950">
-              {operationsCount.denials}
-            </p>
-          </CardContent>
-        </Card>
+        {data.dashboard.kpis.map((metric) => (
+          <Card
+            key={metric.label}
+            className="border-white/80 bg-white/90 backdrop-blur"
+          >
+            <CardHeader className="space-y-2">
+              <CardTitle className="text-base">{metric.label}</CardTitle>
+              <CardDescription>{metric.helper}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-semibold text-slate-950">
+                {formatMetricValue(metric)}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {feedback ? (
@@ -797,6 +760,7 @@ export function PhaseTwoWorkspace({
       >
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <TabsList variant="line">
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="patients">Patients</TabsTrigger>
             <TabsTrigger value="claims">Claims</TabsTrigger>
             <TabsTrigger value="payments">Payments</TabsTrigger>
@@ -812,6 +776,167 @@ export function PhaseTwoWorkspace({
             Refresh
           </Button>
         </div>
+
+        <TabsContent value="dashboard" className="space-y-4">
+          <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+            <Card className="border-white/80 bg-white/90 backdrop-blur">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ChartColumnIncreasing className="size-4 text-emerald-700" />
+                  Revenue command center
+                </CardTitle>
+                <CardDescription>
+                  Phase 3 dashboard for {organizationName} with manual-entry claim
+                  operations, billing follow-up, and demo payment tracking.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-4 md:grid-cols-3">
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-sm text-slate-600">Role</p>
+                  <p className="mt-1 font-medium text-slate-950">{userRole}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-sm text-slate-600">Patients</p>
+                  <p className="mt-1 font-medium text-slate-950">
+                    {data.patients.length} active records
+                  </p>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-sm text-slate-600">Open denials</p>
+                  <p className="mt-1 font-medium text-slate-950">
+                    {data.denials.filter((denial) => denial.status === "open").length} in follow-up
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-white/80 bg-white/90 backdrop-blur">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="size-4 text-amber-700" />
+                  Queue focus
+                </CardTitle>
+                <CardDescription>
+                  Oldest unpaid claims that likely need follow-up next.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {queuePreview.length > 0 ? (
+                  queuePreview.map((claim) => (
+                    <div
+                      key={claim.id}
+                      className="rounded-xl border border-slate-200/80 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-slate-950">
+                            {claim.patient_name}
+                          </p>
+                          <p className="text-sm text-slate-600">{claim.payer_name}</p>
+                        </div>
+                        <Badge variant={getStatusVariant(claim.status)}>
+                          {claim.status}
+                        </Badge>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-600">
+                        <span>{claim.days_open} days open</span>
+                        <span>{formatCurrency(claim.outstanding_amount)}</span>
+                        <span>{claim.recommended_action}</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-xl border border-dashed border-slate-200 p-6 text-sm text-slate-500">
+                    No outstanding claims yet. As claims move through submission,
+                    this panel will surface follow-up priorities.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+            <ARAgingChart data={data.dashboard.aging_buckets} />
+
+            <Card className="border-white/80 bg-white/90 backdrop-blur">
+              <CardHeader>
+                <CardTitle>Aging buckets</CardTitle>
+                <CardDescription>
+                  Bucket totals behind the chart for quick review.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {data.dashboard.aging_buckets.map((bucket) => (
+                  <div
+                    key={bucket.label}
+                    className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3"
+                  >
+                    <div>
+                      <p className="font-medium text-slate-950">{bucket.label} days</p>
+                      <p className="text-sm text-slate-600">
+                        {bucket.claim_count} claims
+                      </p>
+                    </div>
+                    <p className="font-semibold text-slate-950">
+                      {formatCurrency(bucket.amount)}
+                    </p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="border-white/80 bg-white/90 backdrop-blur">
+            <CardHeader>
+              <CardTitle>Claims queue</CardTitle>
+              <CardDescription>
+                Aging-aware queue for unpaid claims that still need action.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Patient</TableHead>
+                    <TableHead>Payer</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Age</TableHead>
+                    <TableHead>Bucket</TableHead>
+                    <TableHead>Outstanding</TableHead>
+                    <TableHead>Recommended action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.dashboard.claims_queue.length > 0 ? (
+                    data.dashboard.claims_queue.map((claim) => (
+                      <TableRow key={claim.id}>
+                        <TableCell className="font-medium text-slate-950">
+                          {claim.patient_name}
+                        </TableCell>
+                        <TableCell>{claim.payer_name}</TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusVariant(claim.status)}>
+                            {claim.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{claim.days_open} days</TableCell>
+                        <TableCell>{claim.aging_bucket}</TableCell>
+                        <TableCell>{formatCurrency(claim.outstanding_amount)}</TableCell>
+                        <TableCell>{claim.recommended_action}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="py-8 text-center text-slate-500">
+                        No unpaid claims in the queue yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="patients" className="space-y-4">
           <div className="grid gap-4 xl:grid-cols-[1.05fr_1.45fr]">
@@ -1578,7 +1703,7 @@ export function PhaseTwoWorkspace({
             <CardHeader>
               <CardTitle>Claims queue</CardTitle>
               <CardDescription>
-                Draft and submitted claims for the current org.
+                Unpaid claims with aging context for manual follow-up.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1586,30 +1711,32 @@ export function PhaseTwoWorkspace({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Patient</TableHead>
-                    <TableHead>Provider</TableHead>
                     <TableHead>Payer</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Submitted</TableHead>
+                    <TableHead>Age</TableHead>
+                    <TableHead>Bucket</TableHead>
+                    <TableHead>Outstanding</TableHead>
+                    <TableHead>Recommended action</TableHead>
                     <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.claims.length > 0 ? (
-                    data.claims.map((claim) => (
+                  {data.dashboard.claims_queue.length > 0 ? (
+                    data.dashboard.claims_queue.map((claim) => (
                       <TableRow key={claim.id}>
                         <TableCell className="font-medium text-slate-950">
                           {claim.patient_name}
                         </TableCell>
-                        <TableCell>{claim.provider_name}</TableCell>
                         <TableCell>{claim.payer_name}</TableCell>
                         <TableCell>
                           <Badge variant={getStatusVariant(claim.status)}>
                             {claim.status}
                           </Badge>
                         </TableCell>
-                        <TableCell>{formatCurrency(claim.total_amount)}</TableCell>
-                        <TableCell>{formatDateTime(claim.submitted_at)}</TableCell>
+                        <TableCell>{claim.days_open} days</TableCell>
+                        <TableCell>{claim.aging_bucket}</TableCell>
+                        <TableCell>{formatCurrency(claim.outstanding_amount)}</TableCell>
+                        <TableCell>{claim.recommended_action}</TableCell>
                         <TableCell className="text-right">
                           {claim.status === "draft" ? (
                             <Button
@@ -1630,8 +1757,8 @@ export function PhaseTwoWorkspace({
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="py-8 text-center text-slate-500">
-                        No claims created yet.
+                      <TableCell colSpan={8} className="py-8 text-center text-slate-500">
+                        No claims in the queue yet.
                       </TableCell>
                     </TableRow>
                   )}

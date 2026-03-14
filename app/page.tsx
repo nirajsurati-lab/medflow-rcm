@@ -21,7 +21,7 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const validTabs = new Set(["patients", "claims", "payments", "denials"]);
+const validTabs = new Set(["dashboard", "patients", "claims", "payments", "denials"]);
 
 type HomeProps = {
   searchParams?: Promise<{
@@ -34,7 +34,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const config = getSupabaseConfigStatus();
   const params = searchParams ? await searchParams : undefined;
   const initialTab =
-    params?.tab && validTabs.has(params.tab) ? params.tab : "patients";
+    params?.tab && validTabs.has(params.tab) ? params.tab : "dashboard";
   const paymentStatus =
     params?.status === "success" || params?.status === "cancelled"
       ? params.status
@@ -121,12 +121,11 @@ export default async function Home({ searchParams }: HomeProps) {
           <CardHeader className="gap-3 md:flex md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
               <CardTitle className="text-3xl text-slate-950">
-                MedFlow Pro Phase 2 workspace
+                MedFlow Pro Phase 3 workspace
               </CardTitle>
               <CardDescription className="max-w-2xl leading-6">
-                Patient CRUD, manual claims, payment-link generation, and denial
-                capture are now running on the org-scoped Supabase foundation
-                from Phase 1.
+                KPI reporting, A/R aging visibility, and a claims follow-up queue
+                now sit on top of the manual billing workflows from Phase 2.
               </CardDescription>
             </div>
             <form action={logoutAction}>
