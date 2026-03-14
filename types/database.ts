@@ -90,6 +90,7 @@ export type Database = {
         {
           id: UUID;
           org_id: UUID;
+          location_id: UUID | null;
           first_name: string;
           last_name: string;
           dob: string;
@@ -101,6 +102,7 @@ export type Database = {
         {
           id?: UUID;
           org_id: UUID;
+          location_id?: UUID | null;
           first_name: string;
           last_name: string;
           dob: string;
@@ -112,6 +114,7 @@ export type Database = {
         {
           id?: UUID;
           org_id?: UUID;
+          location_id?: UUID | null;
           first_name?: string;
           last_name?: string;
           dob?: string;
@@ -125,6 +128,7 @@ export type Database = {
         {
           id: UUID;
           org_id: UUID;
+          location_id: UUID | null;
           npi: string;
           first_name: string;
           last_name: string;
@@ -136,6 +140,7 @@ export type Database = {
         {
           id?: UUID;
           org_id: UUID;
+          location_id?: UUID | null;
           npi: string;
           first_name: string;
           last_name: string;
@@ -147,11 +152,38 @@ export type Database = {
         {
           id?: UUID;
           org_id?: UUID;
+          location_id?: UUID | null;
           npi?: string;
           first_name?: string;
           last_name?: string;
           specialty?: string | null;
           credentials_status?: string;
+          created_at?: Timestamp;
+          updated_at?: Timestamp;
+        }
+      >;
+      locations: Table<
+        {
+          id: UUID;
+          org_id: UUID;
+          name: string;
+          is_default: boolean;
+          created_at: Timestamp;
+          updated_at: Timestamp;
+        },
+        {
+          id?: UUID;
+          org_id: UUID;
+          name: string;
+          is_default?: boolean;
+          created_at?: Timestamp;
+          updated_at?: Timestamp;
+        },
+        {
+          id?: UUID;
+          org_id?: UUID;
+          name?: string;
+          is_default?: boolean;
           created_at?: Timestamp;
           updated_at?: Timestamp;
         }
@@ -262,36 +294,42 @@ export type Database = {
         {
           id: UUID;
           org_id: UUID;
+          location_id: UUID | null;
           patient_id: UUID;
           payer_id: UUID;
           procedure_codes: string[];
           status: string;
           valid_from: string | null;
           valid_to: string | null;
+          notes: string | null;
           created_at: Timestamp;
           updated_at: Timestamp;
         },
         {
           id?: UUID;
           org_id: UUID;
+          location_id?: UUID | null;
           patient_id: UUID;
           payer_id: UUID;
           procedure_codes?: string[];
           status?: string;
           valid_from?: string | null;
           valid_to?: string | null;
+          notes?: string | null;
           created_at?: Timestamp;
           updated_at?: Timestamp;
         },
         {
           id?: UUID;
           org_id?: UUID;
+          location_id?: UUID | null;
           patient_id?: UUID;
           payer_id?: UUID;
           procedure_codes?: string[];
           status?: string;
           valid_from?: string | null;
           valid_to?: string | null;
+          notes?: string | null;
           created_at?: Timestamp;
           updated_at?: Timestamp;
         }
@@ -300,9 +338,13 @@ export type Database = {
         {
           id: UUID;
           org_id: UUID;
+          location_id: UUID | null;
           patient_id: UUID;
           provider_id: UUID;
+          payer_id: UUID | null;
+          claim_id: UUID | null;
           scheduled_at: Timestamp;
+          type: string;
           status: string;
           billing_status: string;
           created_at: Timestamp;
@@ -311,9 +353,13 @@ export type Database = {
         {
           id?: UUID;
           org_id: UUID;
+          location_id?: UUID | null;
           patient_id: UUID;
           provider_id: UUID;
+          payer_id?: UUID | null;
+          claim_id?: UUID | null;
           scheduled_at: Timestamp;
+          type?: string;
           status?: string;
           billing_status?: string;
           created_at?: Timestamp;
@@ -322,9 +368,13 @@ export type Database = {
         {
           id?: UUID;
           org_id?: UUID;
+          location_id?: UUID | null;
           patient_id?: UUID;
           provider_id?: UUID;
+          payer_id?: UUID | null;
+          claim_id?: UUID | null;
           scheduled_at?: Timestamp;
+          type?: string;
           status?: string;
           billing_status?: string;
           created_at?: Timestamp;
@@ -335,10 +385,15 @@ export type Database = {
         {
           id: UUID;
           org_id: UUID;
+          location_id: UUID | null;
           patient_id: UUID;
           provider_id: UUID;
           payer_id: UUID;
+          appointment_id: UUID | null;
           status: string;
+          collections_status: string;
+          collections_sent_at: Timestamp | null;
+          dunning_notes: string | null;
           total_amount: number;
           submitted_at: Timestamp | null;
           paid_at: Timestamp | null;
@@ -348,10 +403,15 @@ export type Database = {
         {
           id?: UUID;
           org_id: UUID;
+          location_id?: UUID | null;
           patient_id: UUID;
           provider_id: UUID;
           payer_id: UUID;
+          appointment_id?: UUID | null;
           status?: string;
+          collections_status?: string;
+          collections_sent_at?: Timestamp | null;
+          dunning_notes?: string | null;
           total_amount?: number;
           submitted_at?: Timestamp | null;
           paid_at?: Timestamp | null;
@@ -361,10 +421,15 @@ export type Database = {
         {
           id?: UUID;
           org_id?: UUID;
+          location_id?: UUID | null;
           patient_id?: UUID;
           provider_id?: UUID;
           payer_id?: UUID;
+          appointment_id?: UUID | null;
           status?: string;
+          collections_status?: string;
+          collections_sent_at?: Timestamp | null;
+          dunning_notes?: string | null;
           total_amount?: number;
           submitted_at?: Timestamp | null;
           paid_at?: Timestamp | null;
@@ -446,6 +511,7 @@ export type Database = {
         {
           id: UUID;
           org_id: UUID;
+          location_id: UUID | null;
           claim_id: UUID | null;
           patient_id: UUID;
           amount: number;
@@ -459,6 +525,7 @@ export type Database = {
         {
           id?: UUID;
           org_id: UUID;
+          location_id?: UUID | null;
           claim_id?: UUID | null;
           patient_id: UUID;
           amount: number;
@@ -472,6 +539,7 @@ export type Database = {
         {
           id?: UUID;
           org_id?: UUID;
+          location_id?: UUID | null;
           claim_id?: UUID | null;
           patient_id?: UUID;
           amount?: number;
@@ -595,36 +663,136 @@ export type Database = {
         {
           id: UUID;
           org_id: UUID;
+          location_id: UUID | null;
           patient_id: UUID;
+          claim_id: UUID | null;
           amount_due: number;
           due_date: string;
           sent_at: Timestamp | null;
+          last_sent_at: Timestamp | null;
           paid_at: Timestamp | null;
+          status: string;
           delivery_method: string;
+          public_token: string | null;
+          token_expires_at: Timestamp | null;
+          stripe_checkout_url: string | null;
           created_at: Timestamp;
           updated_at: Timestamp;
         },
         {
           id?: UUID;
           org_id: UUID;
+          location_id?: UUID | null;
           patient_id: UUID;
+          claim_id?: UUID | null;
           amount_due: number;
           due_date: string;
           sent_at?: Timestamp | null;
+          last_sent_at?: Timestamp | null;
           paid_at?: Timestamp | null;
+          status?: string;
           delivery_method?: string;
+          public_token?: string | null;
+          token_expires_at?: Timestamp | null;
+          stripe_checkout_url?: string | null;
           created_at?: Timestamp;
           updated_at?: Timestamp;
         },
         {
           id?: UUID;
           org_id?: UUID;
+          location_id?: UUID | null;
           patient_id?: UUID;
+          claim_id?: UUID | null;
           amount_due?: number;
           due_date?: string;
           sent_at?: Timestamp | null;
+          last_sent_at?: Timestamp | null;
           paid_at?: Timestamp | null;
+          status?: string;
           delivery_method?: string;
+          public_token?: string | null;
+          token_expires_at?: Timestamp | null;
+          stripe_checkout_url?: string | null;
+          created_at?: Timestamp;
+          updated_at?: Timestamp;
+        }
+      >;
+      statement_line_items: Table<
+        {
+          id: UUID;
+          org_id: UUID;
+          statement_id: UUID;
+          claim_id: UUID | null;
+          kind: string;
+          label: string;
+          amount: number;
+          created_at: Timestamp;
+          updated_at: Timestamp;
+        },
+        {
+          id?: UUID;
+          org_id: UUID;
+          statement_id: UUID;
+          claim_id?: UUID | null;
+          kind: string;
+          label: string;
+          amount: number;
+          created_at?: Timestamp;
+          updated_at?: Timestamp;
+        },
+        {
+          id?: UUID;
+          org_id?: UUID;
+          statement_id?: UUID;
+          claim_id?: UUID | null;
+          kind?: string;
+          label?: string;
+          amount?: number;
+          created_at?: Timestamp;
+          updated_at?: Timestamp;
+        }
+      >;
+      credentialing: Table<
+        {
+          id: UUID;
+          org_id: UUID;
+          location_id: UUID | null;
+          provider_id: UUID;
+          payer_id: UUID;
+          status: string;
+          submitted_at: Timestamp | null;
+          approved_at: Timestamp | null;
+          expiry_date: string | null;
+          notes: string | null;
+          created_at: Timestamp;
+          updated_at: Timestamp;
+        },
+        {
+          id?: UUID;
+          org_id: UUID;
+          location_id?: UUID | null;
+          provider_id: UUID;
+          payer_id: UUID;
+          status?: string;
+          submitted_at?: Timestamp | null;
+          approved_at?: Timestamp | null;
+          expiry_date?: string | null;
+          notes?: string | null;
+          created_at?: Timestamp;
+          updated_at?: Timestamp;
+        },
+        {
+          id?: UUID;
+          org_id?: UUID;
+          location_id?: UUID | null;
+          provider_id?: UUID;
+          payer_id?: UUID;
+          status?: string;
+          submitted_at?: Timestamp | null;
+          approved_at?: Timestamp | null;
+          expiry_date?: string | null;
+          notes?: string | null;
           created_at?: Timestamp;
           updated_at?: Timestamp;
         }

@@ -2,9 +2,13 @@ import type { FormEvent } from "react";
 import {
   Activity,
   BadgeDollarSign,
+  CalendarDays,
+  ClipboardList,
+  FileBadge2,
   History,
   LayoutDashboard,
   ReceiptText,
+  ShieldCheck,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -15,6 +19,10 @@ export type WorkspaceTab =
   | "dashboard"
   | "patients"
   | "claims"
+  | "authorizations"
+  | "statements"
+  | "collections"
+  | "appointments"
   | "payments"
   | "denials"
   | "audit";
@@ -23,6 +31,10 @@ export const ALL_WORKSPACE_TABS = [
   "dashboard",
   "patients",
   "claims",
+  "authorizations",
+  "statements",
+  "collections",
+  "appointments",
   "payments",
   "denials",
   "audit",
@@ -32,6 +44,10 @@ export const WORKSPACE_TAB_LABELS: Record<WorkspaceTab, string> = {
   dashboard: "Dashboard",
   patients: "Patients",
   claims: "Claims",
+  authorizations: "Authorizations",
+  statements: "Statements",
+  collections: "Collections",
+  appointments: "Appointments",
   payments: "Payments",
   denials: "Denials",
   audit: "Audit",
@@ -63,10 +79,34 @@ export const WORKSPACE_TAB_META: Record<
       "Draft claims, enrich payer setup, and push billing work through the submission queue.",
     icon: ReceiptText,
   },
+  authorizations: {
+    label: "Authorizations",
+    description:
+      "Track prior authorization coverage by patient, payer, and CPT code before claims are submitted.",
+    icon: ShieldCheck,
+  },
+  statements: {
+    label: "Statements",
+    description:
+      "Review patient statements, send billing notices, and expose secure public pay links.",
+    icon: FileBadge2,
+  },
+  collections: {
+    label: "Collections",
+    description:
+      "Monitor overdue claims, log dunning outreach, and mark accounts sent to collections.",
+    icon: ClipboardList,
+  },
+  appointments: {
+    label: "Appointments",
+    description:
+      "Drive billing work from scheduled visits and convert completed visits into claim-ready work.",
+    icon: CalendarDays,
+  },
   payments: {
     label: "Payments",
     description:
-      "Create internal demo checkout links and keep patient payment attempts visible to the team.",
+      "Create internal payment links and compare billed, allowed, and paid amounts.",
     icon: BadgeDollarSign,
   },
   denials: {
@@ -86,6 +126,11 @@ export const WORKSPACE_TAB_META: Record<
 export type PatientRow = PhaseTwoWorkspaceData["patients"][number];
 export type ClaimRow = PhaseTwoWorkspaceData["claims"][number];
 export type PaymentRow = PhaseTwoWorkspaceData["payments"][number];
+export type AuthorizationRow = PhaseTwoWorkspaceData["authorizations"][number];
+export type StatementRow = PhaseTwoWorkspaceData["statements"][number];
+export type CollectionRow = PhaseTwoWorkspaceData["collections"][number];
+export type AppointmentRow = PhaseTwoWorkspaceData["appointments"][number];
+export type LocationRow = PhaseTwoWorkspaceData["locations"][number];
 export type AuditLogRow = PhaseTwoWorkspaceData["audit_logs"][number];
 
 export type PhaseTwoWorkspaceProps = {
@@ -106,6 +151,10 @@ export type FeedbackState = {
 export type SelectOption = {
   id: string;
   label: string;
+};
+
+export type LocationOption = SelectOption & {
+  is_default?: boolean;
 };
 
 export type PatientFormState = {
@@ -163,6 +212,26 @@ export type PaymentFormState = {
   description: string;
 };
 
+export type AuthorizationFormState = {
+  patient_id: string;
+  payer_id: string;
+  procedure_codes: string;
+  status: string;
+  valid_from: string;
+  valid_to: string;
+  notes: string;
+};
+
+export type AppointmentFormState = {
+  patient_id: string;
+  provider_id: string;
+  payer_id: string;
+  scheduled_at: string;
+  type: string;
+  status: string;
+  billing_status: string;
+};
+
 export type DenialFormState = {
   claim_id: string;
   reason_code: string;
@@ -184,11 +253,13 @@ export type WorkspaceController = {
     isRefreshing: boolean;
     pendingAction: string | null;
     feedback: FeedbackState;
+    activeLocationId: string | null;
   };
   actions: {
     setActiveTab: (tab: string) => void;
     refreshWorkspace: () => void;
     clearFeedback: () => void;
+    setLocation: (locationId: string) => void;
   };
   dashboard: {
     queuePreview: PhaseTwoWorkspaceData["dashboard"]["claims_queue"];
@@ -197,6 +268,9 @@ export type WorkspaceController = {
   shared: {
     patientOptions: SelectOption[];
     claimOptions: SelectOption[];
+    payerOptions: SelectOption[];
+    providerOptions: SelectOption[];
+    locationOptions: LocationOption[];
   };
   patients: {
     editingPatientId: string | null;
@@ -209,6 +283,10 @@ export type WorkspaceController = {
     resetForm: () => void;
     submit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
     remove: (patient: PatientRow) => Promise<void>;
+    getAuthorizationStatus: (patientId: string) => {
+      label: string;
+      tone: "default" | "destructive" | "secondary" | "outline";
+    };
   };
   lookups: {
     providerForm: ProviderFormState;
@@ -219,8 +297,13 @@ export type WorkspaceController = {
     submitPayer: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   };
   claims: {
+    editingClaimId: string | null;
     form: ClaimFormState;
     draftTotal: number;
+    authReview: {
+      status: "approved" | "missing" | "expired" | "denied";
+      message: string;
+    } | null;
     updateField: (
       field: "patient_id" | "provider_id" | "payer_id",
       value: string
@@ -239,8 +322,31 @@ export type WorkspaceController = {
     ) => void;
     addDiagnosis: () => void;
     removeDiagnosis: (index: number) => void;
+    loadDraft: (claim: ClaimRow) => void;
+    resetDraft: () => void;
     submitDraft: (event: FormEvent<HTMLFormElement>) => Promise<void>;
     submitClaim: (claim: ClaimRow) => Promise<void>;
+  };
+  authorizations: {
+    form: AuthorizationFormState;
+    updateField: (field: keyof AuthorizationFormState, value: string) => void;
+    submit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  };
+  statements: {
+    selectedId: string | null;
+    selectedStatement: StatementRow | null;
+    setSelectedId: (id: string) => void;
+    sendStatement: (statement: StatementRow) => Promise<void>;
+  };
+  collections: {
+    updateNotes: (claim: CollectionRow, value: string) => Promise<void>;
+    markSent: (claim: CollectionRow) => Promise<void>;
+  };
+  appointments: {
+    form: AppointmentFormState;
+    updateField: (field: keyof AppointmentFormState, value: string) => void;
+    submit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+    complete: (appointment: AppointmentRow) => Promise<void>;
   };
   payments: {
     form: PaymentFormState;

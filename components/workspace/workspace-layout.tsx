@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { HeartPulse, Menu, RefreshCw, ShieldCheck } from "lucide-react";
+import { HeartPulse, MapPin, Menu, RefreshCw, ShieldCheck } from "lucide-react";
 
 import { AppCard } from "@/components/system/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/sheet";
 import {
   WORKSPACE_TAB_META,
+  type LocationOption,
   type WorkspaceTab,
 } from "@/components/workspace/types";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,10 @@ type WorkspaceLayoutProps = {
   organizationName: string;
   userRole: string;
   userEmail: string;
+  locationOptions: LocationOption[];
+  currentLocationId: string | null;
+  onLocationChange: (locationId: string) => void;
+  unbilledAppointmentsCount: number;
   header: ReactNode;
   notices?: ReactNode;
   content: ReactNode;
@@ -179,11 +184,19 @@ function SidebarProfile({
   organizationName,
   userRole,
   userEmail,
+  locationOptions,
+  currentLocationId,
+  onLocationChange,
+  unbilledAppointmentsCount,
   tone,
 }: {
   organizationName: string;
   userRole: string;
   userEmail: string;
+  locationOptions: LocationOption[];
+  currentLocationId: string | null;
+  onLocationChange: (locationId: string) => void;
+  unbilledAppointmentsCount: number;
   tone: NavigationTone;
 }) {
   return (
@@ -252,7 +265,56 @@ function SidebarProfile({
         >
           Phase 4
         </Badge>
+        {unbilledAppointmentsCount > 0 ? (
+          <Badge
+            variant="outline"
+            className={cn(
+              "h-auto rounded-full px-3 py-1.5",
+              tone === "sidebar"
+                ? "border-white/14 bg-white/8 text-cyan-100"
+                : "border-border/80 bg-white/70 text-foreground"
+            )}
+          >
+            {unbilledAppointmentsCount} unbilled visits
+          </Badge>
+        ) : null}
       </div>
+      {locationOptions.length > 0 ? (
+        <div className="space-y-2">
+          <p
+            className={cn(
+              "text-xs font-semibold uppercase tracking-[0.24em]",
+              tone === "sidebar" ? "text-white/58" : "text-muted-foreground"
+            )}
+          >
+            Active location
+          </p>
+          <div
+            className={cn(
+              "flex items-center gap-2 rounded-2xl border px-3 py-2",
+              tone === "sidebar"
+                ? "border-white/12 bg-white/8 text-white"
+                : "border-border/80 bg-white/80 text-foreground"
+            )}
+          >
+            <MapPin className="size-4 shrink-0" />
+            <select
+              className={cn(
+                "w-full bg-transparent text-sm outline-none",
+                tone === "sidebar" ? "text-white" : "text-foreground"
+              )}
+              value={currentLocationId ?? locationOptions[0]?.id ?? ""}
+              onChange={(event) => onLocationChange(event.target.value)}
+            >
+              {locationOptions.map((location) => (
+                <option key={location.id} value={location.id}>
+                  {location.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -266,6 +328,10 @@ export function WorkspaceLayout({
   organizationName,
   userRole,
   userEmail,
+  locationOptions,
+  currentLocationId,
+  onLocationChange,
+  unbilledAppointmentsCount,
   header,
   notices,
   content,
@@ -287,6 +353,10 @@ export function WorkspaceLayout({
                 organizationName={organizationName}
                 userRole={userRole}
                 userEmail={userEmail}
+                locationOptions={locationOptions}
+                currentLocationId={currentLocationId}
+                onLocationChange={onLocationChange}
+                unbilledAppointmentsCount={unbilledAppointmentsCount}
                 tone="sidebar"
               />
             </div>
@@ -368,6 +438,10 @@ export function WorkspaceLayout({
                 organizationName={organizationName}
                 userRole={userRole}
                 userEmail={userEmail}
+                locationOptions={locationOptions}
+                currentLocationId={currentLocationId}
+                onLocationChange={onLocationChange}
+                unbilledAppointmentsCount={unbilledAppointmentsCount}
                 tone="surface"
               />
               <WorkspaceNavList

@@ -1,11 +1,24 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import {
+  listAuthorizations,
+  type AuthorizationSummary,
+} from "@/lib/services/authorizations";
 import { listAuditLogs, type AuditLogSummary } from "@/lib/services/audit-logs";
+import { listAppointments, type AppointmentSummary } from "@/lib/services/appointments";
 import { listClaims, type ClaimSummary } from "@/lib/services/claims";
+import { listCollections, type CollectionSummary } from "@/lib/services/collections";
+import { listFeeSchedules, type FeeScheduleSummary } from "@/lib/services/contracts";
+import {
+  listCredentialing,
+  type CredentialingSummary,
+} from "@/lib/services/credentialing";
 import { listDenials, type DenialSummary } from "@/lib/services/denials";
 import { listPayers, listProviders } from "@/lib/services/lookups";
 import { listPatients } from "@/lib/services/patients";
 import { listPayments, type PaymentSummary } from "@/lib/services/payments";
+import { listLocations } from "@/lib/services/locations";
+import { listStatements, type StatementSummary } from "@/lib/services/statements";
 import type { Database } from "@/types/database";
 
 type UserProfile = Database["public"]["Tables"]["users"]["Row"];
@@ -34,15 +47,27 @@ export type DashboardSummary = {
   kpis: DashboardKpi[];
   aging_buckets: DashboardAgingBucket[];
   claims_queue: DashboardClaimQueueItem[];
+  credentialing_summary: {
+    total: number;
+    expiring_soon: number;
+    expired: number;
+  };
 };
 
 export type PhaseTwoWorkspaceData = {
   patients: Awaited<ReturnType<typeof listPatients>>;
   providers: Awaited<ReturnType<typeof listProviders>>;
   payers: Awaited<ReturnType<typeof listPayers>>;
+  locations: Awaited<ReturnType<typeof listLocations>>;
   claims: ClaimSummary[];
   denials: DenialSummary[];
   payments: PaymentSummary[];
+  authorizations: AuthorizationSummary[];
+  statements: StatementSummary[];
+  collections: CollectionSummary[];
+  appointments: AppointmentSummary[];
+  fee_schedules: FeeScheduleSummary[];
+  credentialing: CredentialingSummary[];
   dashboard: DashboardSummary;
   audit_logs: AuditLogSummary[];
 };
@@ -94,7 +119,9 @@ function getRecommendedClaimAction(claim: ClaimSummary, daysOpen: number) {
 function buildDashboardSummary(
   claims: ClaimSummary[],
   payments: PaymentSummary[],
-  denials: DenialSummary[]
+  denials: DenialSummary[],
+  collections: CollectionSummary[],
+  credentialing: CredentialingSummary[]
 ): DashboardSummary {
   const openClaims = claims.filter((claim) => claim.status !== "paid");
   const submittedClaims = claims.filter((claim) => claim.status === "submitted");
@@ -112,6 +139,10 @@ function buildDashboardSummary(
     0
   );
   const denialRate = claims.length > 0 ? (deniedClaims.length / claims.length) * 100 : 0;
+  const overdueExposure = collections.reduce(
+    (sum, claim) => sum + claim.total_amount,
+    0
+  );
 
   const queue = openClaims
     .map((claim) => {
@@ -168,37 +199,115 @@ function buildDashboardSummary(
         kind: "currency",
         helper: `${paidPayments.length} demo payments completed`,
       },
+      {
+        label: "Overdue Exposure",
+        value: overdueExposure,
+        kind: "currency",
+        helper: `${collections.length} claims in collections workflow`,
+      },
     ],
     aging_buckets: agingBuckets,
     claims_queue: queue,
+    credentialing_summary: {
+      total: credentialing.length,
+      expiring_soon: credentialing.filter((item) => item.expires_soon).length,
+      expired: credentialing.filter((item) => item.is_expired).length,
+    },
   };
 }
 
 export async function getPhaseTwoWorkspaceData(
   supabase: SupabaseClient<Database>,
-  profile: UserProfile
+  profile: UserProfile,
+  locationId?: string | null
 ): Promise<PhaseTwoWorkspaceData> {
-  const [patients, providers, payers, claims, denials, payments, auditLogs] =
+  const [
+    patients,
+    providers,
+    payers,
+    locations,
+    claims,
+    denials,
+    payments,
+    authorizations,
+    statements,
+    collections,
+    appointments,
+    feeSchedules,
+    credentialing,
+    auditLogs,
+  ] =
     await Promise.all([
       listPatients(supabase, profile),
       listProviders(supabase, profile),
       listPayers(supabase, profile),
+      listLocations(supabase, profile),
       listClaims(supabase, profile),
       listDenials(supabase, profile),
       listPayments(supabase, profile),
+      listAuthorizations(supabase, profile),
+      listStatements(supabase, profile),
+      listCollections(supabase, profile),
+      listAppointments(supabase, profile),
+      listFeeSchedules(supabase, profile),
+      listCredentialing(supabase, profile),
       profile.role === "admin"
         ? listAuditLogs(supabase, profile)
         : Promise.resolve([]),
     ]);
-  const dashboard = buildDashboardSummary(claims, payments, denials);
+  const resolvedPatients = locationId
+    ? patients.filter((patient) => patient.location_id === locationId)
+    : patients;
+  const resolvedProviders = locationId
+    ? providers.filter((provider) => provider.location_id === locationId)
+    : providers;
+  const resolvedClaims = locationId
+    ? claims.filter((claim) => claim.location_id === locationId)
+    : claims;
+  const resolvedClaimIds = new Set(resolvedClaims.map((claim) => claim.id));
+  const resolvedDenials = locationId
+    ? denials.filter((denial) => resolvedClaimIds.has(denial.claim_id))
+    : denials;
+  const resolvedPayments = locationId
+    ? payments.filter((payment) => payment.location_id === locationId)
+    : payments;
+  const resolvedAuthorizations = locationId
+    ? authorizations.filter((authorization) => authorization.location_id === locationId)
+    : authorizations;
+  const resolvedStatements = locationId
+    ? statements.filter((statement) => statement.location_id === locationId)
+    : statements;
+  const resolvedCollections = locationId
+    ? collections.filter((claim) => claim.location_id === locationId)
+    : collections;
+  const resolvedAppointments = locationId
+    ? appointments.filter((appointment) => appointment.location_id === locationId)
+    : appointments;
+  const resolvedCredentialing = locationId
+    ? credentialing.filter((item) => item.location_id === locationId)
+    : credentialing;
+  const dashboard = buildDashboardSummary(
+    resolvedClaims,
+    resolvedPayments,
+    resolvedDenials,
+    resolvedCollections,
+    resolvedCredentialing
+  );
 
   return {
-    patients,
-    providers,
+    patients: resolvedPatients,
+    providers: resolvedProviders,
     payers,
-    claims,
-    denials,
-    payments,
+    locations,
+    claims: resolvedClaims,
+    denials: resolvedDenials,
+    payments: resolvedPayments,
+    authorizations: resolvedAuthorizations,
+    statements: resolvedStatements,
+    collections: resolvedCollections,
+    appointments: resolvedAppointments,
+    fee_schedules: feeSchedules,
+    credentialing: resolvedCredentialing,
     dashboard,
     audit_logs: auditLogs,
   };

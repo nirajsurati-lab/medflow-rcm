@@ -4,6 +4,8 @@ import type {
   ClaimDiagnosisState,
   ClaimFormState,
   ClaimProcedureState,
+  AuthorizationFormState,
+  AppointmentFormState,
   PatientFormState,
   PatientRow,
   PaymentFormState,
@@ -65,6 +67,26 @@ export const emptyPaymentForm = (): PaymentFormState => ({
   claim_id: "",
   amount: "",
   description: "",
+});
+
+export const emptyAuthorizationForm = (): AuthorizationFormState => ({
+  patient_id: "",
+  payer_id: "",
+  procedure_codes: "",
+  status: "approved",
+  valid_from: "",
+  valid_to: "",
+  notes: "",
+});
+
+export const emptyAppointmentForm = (): AppointmentFormState => ({
+  patient_id: "",
+  provider_id: "",
+  payer_id: "",
+  scheduled_at: "",
+  type: "office_visit",
+  status: "scheduled",
+  billing_status: "pending",
 });
 
 export const emptyDenialForm = (): DenialFormState => ({
@@ -224,10 +246,6 @@ export function formatStatusLabel(status: string) {
 }
 
 export function formatPaymentMethod(method: string) {
-  if (method === "other") {
-    return "Demo checkout";
-  }
-
   return formatStatusLabel(method);
 }
 

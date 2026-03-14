@@ -25,8 +25,12 @@ export function WorkspaceActions({
   const { feedback } = controller.meta;
 
   const hasClaimSetupGap = data.providers.length === 0 || data.payers.length === 0;
+  const unbilledCompletedAppointments = data.appointments.filter(
+    (appointment) =>
+      appointment.status === "completed" && appointment.billing_status !== "claimed"
+  ).length;
 
-  if (!feedback && !hasClaimSetupGap) {
+  if (!feedback && !hasClaimSetupGap && unbilledCompletedAppointments === 0) {
     return null;
   }
 
@@ -58,6 +62,16 @@ export function WorkspaceActions({
           <AlertDescription>
             Add at least one provider and one payer in the Claims tab before
             submitting your first claim.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {unbilledCompletedAppointments > 0 ? (
+        <Alert>
+          <DatabaseZap className="size-4" />
+          <AlertTitle>Completed appointments need billing follow-up</AlertTitle>
+          <AlertDescription>
+            {unbilledCompletedAppointments} completed visits are ready to move into draft-claim work.
           </AlertDescription>
         </Alert>
       ) : null}

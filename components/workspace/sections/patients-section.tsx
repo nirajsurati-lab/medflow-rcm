@@ -40,6 +40,7 @@ import {
   formatDate,
   formatPatientAddress,
 } from "@/components/workspace/workspace-utils";
+import { StatusBadge } from "@/components/workspace/shared/status-badge";
 
 type PatientsSectionProps = {
   controller: WorkspaceController;
@@ -124,6 +125,7 @@ export function PatientsSection({ controller }: PatientsSectionProps) {
           columns={[
             { key: "patient", label: "Patient" },
             { key: "dob", label: "DOB" },
+            { key: "auth", label: "Prior auth" },
             { key: "insurance", label: "Insurance" },
             { key: "address", label: "Address" },
             { key: "actions", label: "Actions", className: "text-right" },
@@ -136,6 +138,12 @@ export function PatientsSection({ controller }: PatientsSectionProps) {
                 {patient.first_name} {patient.last_name}
               </TableCell>
               <TableCell>{formatDate(patient.dob)}</TableCell>
+              <TableCell>
+                <StatusBadge
+                  status={controller.patients.getAuthorizationStatus(patient.id).label.toLowerCase().replace(/\s+/g, "_")}
+                  label={controller.patients.getAuthorizationStatus(patient.id).label}
+                />
+              </TableCell>
               <TableCell>{patient.insurance_id ?? "No ID"}</TableCell>
               <TableCell className="max-w-xs truncate">
                 {formatPatientAddress(patient)}
@@ -174,6 +182,11 @@ export function PatientsSection({ controller }: PatientsSectionProps) {
                       {patient.first_name} {patient.last_name}
                     </AppCardTitle>
                     <AppCardDescription>{formatDate(patient.dob)}</AppCardDescription>
+                    <StatusBadge
+                      status={controller.patients.getAuthorizationStatus(patient.id).label.toLowerCase().replace(/\s+/g, "_")}
+                      label={controller.patients.getAuthorizationStatus(patient.id).label}
+                      className="mt-2"
+                    />
                   </div>
                   <Button
                     type="button"
@@ -252,6 +265,14 @@ export function PatientsSection({ controller }: PatientsSectionProps) {
             <SheetDescription>
               Capture demographics and insurance details for downstream billing workflows.
             </SheetDescription>
+            {controller.patients.editingPatientId ? (
+              <div className="pt-3">
+                <StatusBadge
+                  status={controller.patients.getAuthorizationStatus(controller.patients.editingPatientId).label.toLowerCase().replace(/\s+/g, "_")}
+                  label={controller.patients.getAuthorizationStatus(controller.patients.editingPatientId).label}
+                />
+              </div>
+            ) : null}
           </SheetHeader>
 
           <form className="flex min-h-0 flex-1 flex-col" onSubmit={controller.patients.submit}>

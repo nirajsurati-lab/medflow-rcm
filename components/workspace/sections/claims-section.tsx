@@ -21,6 +21,7 @@ import { FormField } from "@/components/system/form-field";
 import { ResponsiveRecords } from "@/components/system/responsive-records";
 import { Section } from "@/components/system/section";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
   DialogClose,
@@ -100,6 +101,23 @@ export function ClaimsSection({
           }
         >
           <form className="space-y-5" onSubmit={controller.claims.submitDraft}>
+            {controller.claims.authReview ? (
+              <Alert
+                variant={
+                  controller.claims.authReview.status === "approved"
+                    ? "default"
+                    : "destructive"
+                }
+              >
+                <AlertTitle>
+                  {controller.claims.authReview.status === "approved"
+                    ? "Prior authorization ready"
+                    : "Prior authorization required"}
+                </AlertTitle>
+                <AlertDescription>{controller.claims.authReview.message}</AlertDescription>
+              </Alert>
+            ) : null}
+
             <div className="grid gap-4 md:grid-cols-3">
               <FormField label="Patient">
                 <Select
@@ -373,7 +391,7 @@ export function ClaimsSection({
               </div>
               <Button type="submit" disabled={isBusy}>
                 <ReceiptText className="size-4" />
-                Save draft claim
+                {controller.claims.editingClaimId ? "Update draft claim" : "Save draft claim"}
               </Button>
             </div>
           </form>
@@ -497,14 +515,25 @@ export function ClaimsSection({
                 <TableCell>{claim.recommended_action}</TableCell>
                 <TableCell className="text-right">
                   {claim.status === "draft" ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => controller.claims.submitClaim(claim)}
-                      disabled={isBusy}
-                    >
-                      Submit
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => controller.claims.loadDraft(claim)}
+                        disabled={isBusy}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => controller.claims.submitClaim(claim)}
+                        disabled={isBusy}
+                      >
+                        Submit
+                      </Button>
+                    </div>
                   ) : (
                     <span className="text-sm text-muted-foreground">No action</span>
                   )}
@@ -550,14 +579,25 @@ export function ClaimsSection({
                     </p>
                   </div>
                   {claim.status === "draft" ? (
-                    <Button
-                      type="button"
-                      className="w-full"
-                      onClick={() => controller.claims.submitClaim(claim)}
-                      disabled={isBusy}
-                    >
-                      Submit claim
-                    </Button>
+                    <div className="grid gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => controller.claims.loadDraft(claim)}
+                        disabled={isBusy}
+                      >
+                        Edit draft
+                      </Button>
+                      <Button
+                        type="button"
+                        className="w-full"
+                        onClick={() => controller.claims.submitClaim(claim)}
+                        disabled={isBusy}
+                      >
+                        Submit claim
+                      </Button>
+                    </div>
                   ) : null}
                 </AppCardContent>
               </AppCard>

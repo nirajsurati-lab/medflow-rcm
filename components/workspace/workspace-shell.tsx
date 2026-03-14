@@ -20,6 +20,15 @@ export function WorkspaceShell(props: PhaseTwoWorkspaceProps) {
       organizationName={props.organizationName}
       userRole={props.userRole}
       userEmail={props.userEmail}
+      locationOptions={controller.shared.locationOptions}
+      currentLocationId={controller.meta.activeLocationId}
+      onLocationChange={controller.actions.setLocation}
+      unbilledAppointmentsCount={
+        props.data.appointments.filter(
+          (appointment) =>
+            appointment.status === "completed" && appointment.billing_status !== "claimed"
+        ).length
+      }
       header={
         <WorkspaceHeader
           kpis={props.data.dashboard.kpis}

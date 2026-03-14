@@ -28,6 +28,10 @@ const validTabs = new Set([
   "dashboard",
   "patients",
   "claims",
+  "authorizations",
+  "statements",
+  "collections",
+  "appointments",
   "payments",
   "denials",
   "audit",
@@ -37,6 +41,7 @@ type HomeProps = {
   searchParams?: Promise<{
     tab?: string;
     status?: string;
+    location?: string;
   }>;
 };
 
@@ -73,6 +78,7 @@ export default async function Home({ searchParams }: HomeProps) {
     params?.status === "success" || params?.status === "cancelled"
       ? params.status
       : null;
+  const selectedLocationId = params?.location ?? null;
 
   if (!config.isConfigured) {
     return (
@@ -136,7 +142,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const workspaceSupabase =
     createAdminSupabaseClient() ?? (await createServerSupabaseClient());
   const workspaceData = profile
-    ? await getPhaseTwoWorkspaceData(workspaceSupabase, profile)
+    ? await getPhaseTwoWorkspaceData(workspaceSupabase, profile, selectedLocationId)
     : null;
 
   if (profile && workspaceData) {

@@ -1,13 +1,17 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useDeferredValue, useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import type {
+  AppointmentFormState,
+  AppointmentRow,
+  AuthorizationFormState,
   ClaimDiagnosisState,
   ClaimProcedureState,
   ClaimRow,
+  CollectionRow,
   PatientRow,
   PhaseTwoWorkspaceProps,
   ProviderFormState,
@@ -17,6 +21,7 @@ import type {
   PatientFormState,
   PaymentFormState,
   DenialFormState,
+  StatementRow,
 } from "@/components/workspace/types";
 import {
   ALL_WORKSPACE_TABS,
@@ -24,6 +29,8 @@ import {
 } from "@/components/workspace/types";
 import {
   buildPatientPayload,
+  emptyAppointmentForm,
+  emptyAuthorizationForm,
   emptyClaimForm,
   emptyDenialForm,
   emptyDiagnosis,
@@ -42,18 +49,18 @@ function getInitialFeedback(paymentStatus: string | null) {
   if (paymentStatus === "success") {
     return {
       tone: "success" as const,
-      title: "Demo payment completed",
+      title: "Payment completed",
       message:
-        "The dummy checkout flow completed and the payment queue was updated for the demo.",
+        "The payment posted successfully and any remaining patient balance was re-evaluated for statement generation.",
     };
   }
 
   if (paymentStatus === "cancelled") {
     return {
       tone: "error" as const,
-      title: "Demo payment cancelled",
+      title: "Payment cancelled",
       message:
-        "The dummy payment was cancelled. You can generate a fresh link from the Payments tab.",
+        "The payment attempt was cancelled. You can generate a fresh link from the Payments tab.",
     };
   }
 
@@ -67,6 +74,8 @@ export function useWorkspaceController({
   userRole,
 }: Pick<PhaseTwoWorkspaceProps, "data" | "initialTab" | "paymentStatus" | "userRole">): WorkspaceController {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isRefreshing, startTransition] = useTransition();
   const visibleTabs: readonly WorkspaceTab[] =
     userRole === "admin"
@@ -76,22 +85,34 @@ export function useWorkspaceController({
     ? (initialTab as WorkspaceTab)
     : "dashboard";
 
+  const initialLocationId =
+    searchParams.get("location") ??
+    data.locations[0]?.id ??
+    null;
+
   const [activeTab, setActiveTabState] = useState<WorkspaceTab>(safeInitialTab);
   const [feedback, setFeedback] = useState(getInitialFeedback(paymentStatus));
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [editingPatientId, setEditingPatientId] = useState<string | null>(null);
+  const [editingClaimId, setEditingClaimId] = useState<string | null>(null);
   const [patientSearch, setPatientSearch] = useState("");
-  const deferredPatientSearch = useDeferredValue(patientSearch);
   const [patientForm, setPatientForm] = useState(emptyPatientForm);
   const [providerForm, setProviderForm] = useState(emptyProviderForm);
   const [payerForm, setPayerForm] = useState(emptyPayerForm);
   const [claimForm, setClaimForm] = useState(emptyClaimForm);
   const [paymentForm, setPaymentForm] = useState(emptyPaymentForm);
+  const [authorizationForm, setAuthorizationForm] = useState(emptyAuthorizationForm);
+  const [appointmentForm, setAppointmentForm] = useState(emptyAppointmentForm);
   const [denialForm, setDenialForm] = useState(emptyDenialForm);
   const [latestPaymentLink, setLatestPaymentLink] = useState<string | null>(null);
+  const [selectedStatementId, setSelectedStatementId] = useState<string | null>(
+    data.statements[0]?.id ?? null
+  );
   const [selectedAuditLogId, setSelectedAuditLogId] = useState<string | null>(
     data.audit_logs[0]?.id ?? null
   );
+  const [activeLocationId, setActiveLocationId] = useState<string | null>(initialLocationId);
+  const deferredPatientSearch = useDeferredValue(patientSearch);
 
   useEffect(() => {
     setActiveTabState(safeInitialTab);
@@ -100,6 +121,10 @@ export function useWorkspaceController({
   useEffect(() => {
     setFeedback(getInitialFeedback(paymentStatus));
   }, [paymentStatus]);
+
+  useEffect(() => {
+    setActiveLocationId(initialLocationId);
+  }, [initialLocationId]);
 
   const query = deferredPatientSearch.trim().toLowerCase();
   const filteredPatients = !query
@@ -116,19 +141,59 @@ export function useWorkspaceController({
         return haystack.includes(query);
       });
 
-  const patientOptions = data.patients.map((patient) => ({
-    id: patient.id,
-    label: `${patient.first_name} ${patient.last_name}`.trim(),
-  }));
+  const patientOptions = useMemo(
+    () =>
+      data.patients.map((patient) => ({
+        id: patient.id,
+        label: `${patient.first_name} ${patient.last_name}`.trim(),
+      })),
+    [data.patients]
+  );
 
-  const claimOptions = data.claims.map((claim) => ({
-    id: claim.id,
-    label: `${claim.patient_name} · ${formatCurrency(claim.total_amount)} · ${formatStatusLabel(
-      claim.status
-    )}`,
-  }));
+  const claimOptions = useMemo(
+    () =>
+      data.claims.map((claim) => ({
+        id: claim.id,
+        label: `${claim.patient_name} · ${formatCurrency(claim.total_amount)} · ${formatStatusLabel(
+          claim.status
+        )}`,
+      })),
+    [data.claims]
+  );
+
+  const payerOptions = useMemo(
+    () =>
+      data.payers.map((payer) => ({
+        id: payer.id,
+        label: payer.name,
+      })),
+    [data.payers]
+  );
+
+  const providerOptions = useMemo(
+    () =>
+      data.providers.map((provider) => ({
+        id: provider.id,
+        label: `${provider.first_name} ${provider.last_name}`.trim(),
+      })),
+    [data.providers]
+  );
+
+  const locationOptions = useMemo(
+    () =>
+      data.locations.map((location) => ({
+        id: location.id,
+        label: location.name,
+        is_default: location.is_default,
+      })),
+    [data.locations]
+  );
 
   const queuePreview = data.dashboard.claims_queue.slice(0, 3);
+  const selectedStatement =
+    data.statements.find((statement) => statement.id === selectedStatementId) ??
+    data.statements[0] ??
+    null;
   const selectedAuditLog =
     data.audit_logs.find((log) => log.id === selectedAuditLogId) ??
     data.audit_logs[0] ??
@@ -141,6 +206,58 @@ export function useWorkspaceController({
       description: WORKSPACE_TAB_META[tab].description,
       icon: WORKSPACE_TAB_META[tab].icon,
     }));
+
+  const claimAuthReview = useMemo(() => {
+    const codes = claimForm.procedures
+      .map((procedure) => procedure.cpt_code.trim().toUpperCase())
+      .filter(Boolean);
+
+    if (!claimForm.patient_id || !claimForm.payer_id || codes.length === 0) {
+      return null;
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const matches = data.authorizations.filter(
+      (authorization) =>
+        authorization.patient_id === claimForm.patient_id &&
+        authorization.payer_id === claimForm.payer_id &&
+        codes.every((code) => authorization.procedure_codes.includes(code))
+    );
+
+    if (matches.length === 0) {
+      return {
+        status: "missing" as const,
+        message:
+          "No prior authorization covers all CPT codes on this claim. Create an authorization before submission.",
+      };
+    }
+
+    const latest = matches[0];
+
+    if (latest.status === "denied") {
+      return {
+        status: "denied" as const,
+        message: "The matching prior authorization is denied and this claim cannot be submitted.",
+      };
+    }
+
+    if (
+      latest.status !== "approved" ||
+      (latest.valid_from && latest.valid_from > today) ||
+      (latest.valid_to && latest.valid_to < today)
+    ) {
+      return {
+        status: "expired" as const,
+        message:
+          "The matching prior authorization is not active for the current date range.",
+      };
+    }
+
+    return {
+      status: "approved" as const,
+      message: "An active approved prior authorization is on file for this claim.",
+    };
+  }, [claimForm, data.authorizations]);
 
   function refreshWorkspace() {
     startTransition(() => {
@@ -158,11 +275,19 @@ export function useWorkspaceController({
     }
   }
 
+  function setLocation(locationId: string) {
+    setActiveLocationId(locationId);
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("location", locationId);
+    params.set("tab", activeTab);
+    router.replace(`${pathname}?${params.toString()}`);
+  }
+
   function updatePatientField(field: keyof PatientFormState, value: string) {
     setPatientForm((current) => ({
       ...current,
-      [field]:
-        field === "state" ? value.toUpperCase() : value,
+      [field]: field === "state" ? value.toUpperCase() : value,
     }));
   }
 
@@ -189,6 +314,25 @@ export function useWorkspaceController({
     setPatientForm(emptyPatientForm());
   }
 
+  function getPatientAuthorizationStatus(patientId: string) {
+    const today = new Date().toISOString().slice(0, 10);
+    const records = data.authorizations.filter((item) => item.patient_id === patientId);
+
+    if (records.some((item) => item.status === "approved" && (!item.valid_from || item.valid_from <= today) && (!item.valid_to || item.valid_to >= today))) {
+      return { label: "Authorized", tone: "default" as const };
+    }
+
+    if (records.some((item) => item.status === "denied")) {
+      return { label: "Denied", tone: "destructive" as const };
+    }
+
+    if (records.length > 0) {
+      return { label: "Expired", tone: "secondary" as const };
+    }
+
+    return { label: "No auth", tone: "outline" as const };
+  }
+
   async function handlePatientSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     clearFeedback();
@@ -210,7 +354,7 @@ export function useWorkspaceController({
         title: editingPatientId ? "Patient updated" : "Patient created",
         message: editingPatientId
           ? "The patient record was saved successfully."
-          : "The new patient is now available for claims and payments.",
+          : "The new patient is now available for claims, statements, and authorizations.",
       });
       resetPatientForm();
       refreshWorkspace();
@@ -327,7 +471,7 @@ export function useWorkspaceController({
       setFeedback({
         tone: "success",
         title: "Payer added",
-        message: "The payer is now available when drafting claims.",
+        message: "The payer is now available when drafting claims and authorizations.",
       });
       refreshWorkspace();
     } catch (error) {
@@ -398,10 +542,7 @@ export function useWorkspaceController({
   function addDiagnosis() {
     setClaimForm((current) => ({
       ...current,
-      diagnoses: [
-        ...current.diagnoses,
-        emptyDiagnosis(current.diagnoses.length + 1),
-      ],
+      diagnoses: [...current.diagnoses, emptyDiagnosis(current.diagnoses.length + 1)],
     }));
   }
 
@@ -420,38 +561,73 @@ export function useWorkspaceController({
     }));
   }
 
+  function loadClaimDraft(claim: ClaimRow) {
+    setEditingClaimId(claim.id);
+    setClaimForm({
+      patient_id: claim.patient_id,
+      provider_id: claim.provider_id,
+      payer_id: claim.payer_id,
+      procedures:
+        claim.procedures.length > 0
+          ? claim.procedures.map((procedure) => ({
+              cpt_code: procedure.cpt_code,
+              description: procedure.description ?? "",
+              units: String(procedure.units),
+              charge_amount: String(procedure.charge_amount),
+              allowed_amount: String(procedure.allowed_amount),
+            }))
+          : [emptyProcedure()],
+      diagnoses:
+        claim.diagnoses.length > 0
+          ? claim.diagnoses.map((diagnosis) => ({
+              icd10_code: diagnosis.icd10_code,
+              description: diagnosis.description ?? "",
+              sequence: String(diagnosis.sequence),
+            }))
+          : [emptyDiagnosis(1)],
+    });
+    setActiveTabState("claims");
+  }
+
+  function resetClaimDraft() {
+    setEditingClaimId(null);
+    setClaimForm(emptyClaimForm());
+  }
+
   async function handleClaimDraftSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     clearFeedback();
     setPendingAction("create-claim");
 
     try {
-      await requestJson("/api/claims", {
-        method: "POST",
+      await requestJson(editingClaimId ? `/api/claims/${editingClaimId}` : "/api/claims", {
+        method: editingClaimId ? "PATCH" : "POST",
         body: JSON.stringify({
           patient_id: claimForm.patient_id,
           provider_id: claimForm.provider_id,
           payer_id: claimForm.payer_id,
           procedures: claimForm.procedures.map((procedure) => ({
-            cpt_code: procedure.cpt_code.trim(),
+            cpt_code: procedure.cpt_code.trim().toUpperCase(),
             description: procedure.description.trim() || null,
             units: Number(procedure.units),
             charge_amount: Number(procedure.charge_amount),
             allowed_amount: Number(procedure.allowed_amount),
           })),
           diagnoses: claimForm.diagnoses.map((diagnosis) => ({
-            icd10_code: diagnosis.icd10_code.trim(),
+            icd10_code: diagnosis.icd10_code.trim().toUpperCase(),
             description: diagnosis.description.trim() || null,
             sequence: Number(diagnosis.sequence),
           })),
         }),
       });
 
-      setClaimForm(emptyClaimForm());
+      resetClaimDraft();
       setFeedback({
         tone: "success",
-        title: "Claim drafted",
-        message: "The claim is saved as a draft and ready for submission.",
+        title: editingClaimId ? "Claim updated" : "Claim drafted",
+        message: editingClaimId
+          ? "The draft claim was updated successfully."
+          : "The claim is saved as a draft and ready for submission.",
       });
       refreshWorkspace();
     } catch (error) {
@@ -493,6 +669,128 @@ export function useWorkspaceController({
     }
   }
 
+  function updateAuthorizationField(field: keyof AuthorizationFormState, value: string) {
+    setAuthorizationForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  async function handleAuthorizationSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    clearFeedback();
+    setPendingAction("create-authorization");
+
+    try {
+      await requestJson("/api/authorizations", {
+        method: "POST",
+        body: JSON.stringify({
+          patient_id: authorizationForm.patient_id,
+          payer_id: authorizationForm.payer_id,
+          procedure_codes: authorizationForm.procedure_codes
+            .split(",")
+            .map((code) => code.trim().toUpperCase())
+            .filter(Boolean),
+          status: authorizationForm.status,
+          valid_from: authorizationForm.valid_from || null,
+          valid_to: authorizationForm.valid_to || null,
+          notes: authorizationForm.notes.trim() || null,
+        }),
+      });
+
+      setAuthorizationForm(emptyAuthorizationForm());
+      setFeedback({
+        tone: "success",
+        title: "Authorization created",
+        message: "The prior authorization is now available for claim review.",
+      });
+      refreshWorkspace();
+    } catch (error) {
+      setFeedback({
+        tone: "error",
+        title: "Authorization save failed",
+        message:
+          error instanceof Error ? error.message : "Unable to create the authorization.",
+      });
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  function updateAppointmentField(field: keyof AppointmentFormState, value: string) {
+    setAppointmentForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  async function handleAppointmentSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    clearFeedback();
+    setPendingAction("create-appointment");
+
+    try {
+      await requestJson("/api/appointments", {
+        method: "POST",
+        body: JSON.stringify({
+          patient_id: appointmentForm.patient_id,
+          provider_id: appointmentForm.provider_id,
+          payer_id: appointmentForm.payer_id || null,
+          scheduled_at: new Date(appointmentForm.scheduled_at).toISOString(),
+          type: appointmentForm.type.trim(),
+          status: appointmentForm.status,
+          billing_status: appointmentForm.billing_status,
+        }),
+      });
+
+      setAppointmentForm(emptyAppointmentForm());
+      setFeedback({
+        tone: "success",
+        title: "Appointment created",
+        message: "The appointment is now tracked in the billing pipeline.",
+      });
+      refreshWorkspace();
+    } catch (error) {
+      setFeedback({
+        tone: "error",
+        title: "Appointment save failed",
+        message:
+          error instanceof Error ? error.message : "Unable to create the appointment.",
+      });
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function handleAppointmentComplete(appointment: AppointmentRow) {
+    clearFeedback();
+    setPendingAction(`complete-appointment-${appointment.id}`);
+
+    try {
+      await requestJson(`/api/appointments/${appointment.id}/complete`, {
+        method: "PATCH",
+      });
+
+      setFeedback({
+        tone: "success",
+        title: "Appointment completed",
+        message:
+          "The appointment moved into billing and a draft claim shell was created for the visit.",
+      });
+      setActiveTabState("claims");
+      refreshWorkspace();
+    } catch (error) {
+      setFeedback({
+        tone: "error",
+        title: "Unable to complete appointment",
+        message:
+          error instanceof Error ? error.message : "Unable to convert the appointment into billing work.",
+      });
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
   function updatePaymentField(field: keyof PaymentFormState, value: string) {
     setPaymentForm((current) => ({
       ...current,
@@ -520,9 +818,8 @@ export function useWorkspaceController({
       setPaymentForm(emptyPaymentForm());
       setFeedback({
         tone: "success",
-        title: "Demo payment link created",
-        message:
-          "The demo checkout link is ready. Open it to simulate a successful or cancelled payment.",
+        title: "Payment link created",
+        message: "The payment link is ready to open or share.",
       });
       refreshWorkspace();
     } catch (error) {
@@ -557,15 +854,95 @@ export function useWorkspaceController({
       setFeedback({
         tone: "success",
         title: "Payment link copied",
-        message: "The demo checkout URL is on your clipboard.",
+        message: "The payment URL is on your clipboard.",
       });
     } catch {
       setFeedback({
         tone: "error",
         title: "Copy failed",
-        message:
-          "Clipboard access was blocked. Open the demo checkout directly instead.",
+        message: "Clipboard access was blocked. Open the payment link directly instead.",
       });
+    }
+  }
+
+  async function handleSendStatement(statement: StatementRow) {
+    clearFeedback();
+    setPendingAction(`send-statement-${statement.id}`);
+
+    try {
+      await requestJson(`/api/statements/${statement.id}/send`, {
+        method: "PATCH",
+      });
+
+      setFeedback({
+        tone: "success",
+        title: "Statement sent",
+        message: "The statement was marked as sent and the portal link remains available.",
+      });
+      refreshWorkspace();
+    } catch (error) {
+      setFeedback({
+        tone: "error",
+        title: "Statement send failed",
+        message:
+          error instanceof Error ? error.message : "Unable to mark the statement as sent.",
+      });
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function handleCollectionNoteUpdate(claim: CollectionRow, value: string) {
+    clearFeedback();
+    setPendingAction(`collection-note-${claim.id}`);
+
+    try {
+      await requestJson(`/api/collections/${claim.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          dunning_notes: value,
+        }),
+      });
+      refreshWorkspace();
+    } catch (error) {
+      setFeedback({
+        tone: "error",
+        title: "Collection note failed",
+        message:
+          error instanceof Error ? error.message : "Unable to save dunning notes.",
+      });
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function handleCollectionMarkSent(claim: CollectionRow) {
+    clearFeedback();
+    setPendingAction(`collection-send-${claim.id}`);
+
+    try {
+      await requestJson(`/api/collections/${claim.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          collections_status: "sent",
+        }),
+      });
+
+      setFeedback({
+        tone: "success",
+        title: "Claim sent to collections",
+        message: `The collections workflow was updated for ${claim.patient_name}.`,
+      });
+      refreshWorkspace();
+    } catch (error) {
+      setFeedback({
+        tone: "error",
+        title: "Collections update failed",
+        message:
+          error instanceof Error ? error.message : "Unable to update collections status.",
+      });
+    } finally {
+      setPendingAction(null);
     }
   }
 
@@ -625,11 +1002,13 @@ export function useWorkspaceController({
       isRefreshing,
       pendingAction,
       feedback,
+      activeLocationId,
     },
     actions: {
       setActiveTab,
       refreshWorkspace,
       clearFeedback,
+      setLocation,
     },
     dashboard: {
       queuePreview,
@@ -638,6 +1017,9 @@ export function useWorkspaceController({
     shared: {
       patientOptions,
       claimOptions,
+      payerOptions,
+      providerOptions,
+      locationOptions,
     },
     patients: {
       editingPatientId,
@@ -650,6 +1032,7 @@ export function useWorkspaceController({
       resetForm: resetPatientForm,
       submit: handlePatientSubmit,
       remove: handlePatientDelete,
+      getAuthorizationStatus: getPatientAuthorizationStatus,
     },
     lookups: {
       providerForm,
@@ -660,8 +1043,10 @@ export function useWorkspaceController({
       submitPayer: handlePayerSubmit,
     },
     claims: {
+      editingClaimId,
       form: claimForm,
       draftTotal: claimDraftTotal,
+      authReview: claimAuthReview,
       updateField: updateClaimField,
       updateProcedureField,
       addProcedure,
@@ -669,8 +1054,31 @@ export function useWorkspaceController({
       updateDiagnosisField,
       addDiagnosis,
       removeDiagnosis,
+      loadDraft: loadClaimDraft,
+      resetDraft: resetClaimDraft,
       submitDraft: handleClaimDraftSubmit,
       submitClaim: handleClaimSubmitAction,
+    },
+    authorizations: {
+      form: authorizationForm,
+      updateField: updateAuthorizationField,
+      submit: handleAuthorizationSubmit,
+    },
+    statements: {
+      selectedId: selectedStatementId,
+      selectedStatement,
+      setSelectedId: setSelectedStatementId,
+      sendStatement: handleSendStatement,
+    },
+    collections: {
+      updateNotes: handleCollectionNoteUpdate,
+      markSent: handleCollectionMarkSent,
+    },
+    appointments: {
+      form: appointmentForm,
+      updateField: updateAppointmentField,
+      submit: handleAppointmentSubmit,
+      complete: handleAppointmentComplete,
     },
     payments: {
       form: paymentForm,

@@ -197,32 +197,80 @@ export function DashboardSection({
         <ARAgingChart data={data.dashboard.aging_buckets} />
 
         <Section
-          eyebrow="Bucket Detail"
-          title="Aging buckets"
-          description="The balances behind the chart, grouped for quick review."
+          eyebrow="Governance"
+          title="Credentialing summary"
+          description="Provider enrollment records that need attention before they expire."
         >
           <div className="space-y-3">
-            {data.dashboard.aging_buckets.map((bucket) => (
-              <div
-                key={bucket.label}
-                className="flex items-center justify-between rounded-[24px] border border-border/70 bg-white/70 px-4 py-4"
-              >
-                <div>
-                  <p className="font-heading text-lg font-semibold text-foreground">
-                    {bucket.label} days
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {bucket.claim_count} claims
-                  </p>
-                </div>
-                <p className="font-heading text-xl font-semibold text-foreground">
-                  {formatCurrency(bucket.amount)}
+            <div className="flex items-center justify-between rounded-[24px] border border-border/70 bg-white/70 px-4 py-4">
+              <div>
+                <p className="font-heading text-lg font-semibold text-foreground">
+                  Total records
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Provider x payer enrollment tracking
                 </p>
               </div>
-            ))}
+              <p className="font-heading text-xl font-semibold text-foreground">
+                {data.dashboard.credentialing_summary.total}
+              </p>
+            </div>
+            <div className="flex items-center justify-between rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-4">
+              <div>
+                <p className="font-heading text-lg font-semibold text-foreground">
+                  Expiring soon
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Credentials expiring within 60 days
+                </p>
+              </div>
+              <p className="font-heading text-xl font-semibold text-foreground">
+                {data.dashboard.credentialing_summary.expiring_soon}
+              </p>
+            </div>
+            <div className="flex items-center justify-between rounded-[24px] border border-rose-200 bg-rose-50 px-4 py-4">
+              <div>
+                <p className="font-heading text-lg font-semibold text-foreground">
+                  Expired
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Credentials that require immediate follow-up
+                </p>
+              </div>
+              <p className="font-heading text-xl font-semibold text-foreground">
+                {data.dashboard.credentialing_summary.expired}
+              </p>
+            </div>
           </div>
         </Section>
       </div>
+
+      <Section
+        eyebrow="Bucket Detail"
+        title="Aging buckets"
+        description="The balances behind the chart, grouped for quick review."
+      >
+        <div className="space-y-3">
+          {data.dashboard.aging_buckets.map((bucket) => (
+            <div
+              key={bucket.label}
+              className="flex items-center justify-between rounded-[24px] border border-border/70 bg-white/70 px-4 py-4"
+            >
+              <div>
+                <p className="font-heading text-lg font-semibold text-foreground">
+                  {bucket.label} days
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {bucket.claim_count} claims
+                </p>
+              </div>
+              <p className="font-heading text-xl font-semibold text-foreground">
+                {formatCurrency(bucket.amount)}
+              </p>
+            </div>
+          ))}
+        </div>
+      </Section>
 
       <Section
         eyebrow="Operational Queue"

@@ -59,7 +59,7 @@ export function PaymentsSection({
     if (
       isSheetOpen &&
       !controller.meta.pendingAction &&
-      title === "Demo payment link created"
+      title === "Payment link created"
     ) {
       setIsSheetOpen(false);
     }
@@ -72,7 +72,7 @@ export function PaymentsSection({
           <AppCardHeader className="space-y-3 border-b border-border/60 px-6 py-5">
             <AppCardTitle className="text-xl">Checkout link ready</AppCardTitle>
             <AppCardDescription>
-              Open the demo checkout to simulate a successful or cancelled patient payment.
+              Open the payment link to collect patient funds and feed the statement workflow.
             </AppCardDescription>
           </AppCardHeader>
           <AppCardContent className="space-y-4 px-6 py-6">
@@ -82,7 +82,7 @@ export function PaymentsSection({
             <div className="flex flex-wrap gap-2">
               <Button type="button" onClick={controller.payments.openLatestLink}>
                 <ExternalLink className="size-4" />
-                Open demo checkout
+                Open payment link
               </Button>
               <Button
                 type="button"
@@ -100,7 +100,7 @@ export function PaymentsSection({
       <Section
         eyebrow="Patient Payments"
         title="Payment records"
-        description="Monitor pending and completed payment attempts while creating new demo links in a focused side panel."
+        description="Monitor pending and completed payment attempts while comparing billed, allowed, and paid amounts."
         actions={
           <Button type="button" onClick={() => setIsSheetOpen(true)}>
             <Plus className="size-4" />
@@ -111,7 +111,9 @@ export function PaymentsSection({
         <ResponsiveRecords
           columns={[
             { key: "patient", label: "Patient" },
-            { key: "amount", label: "Amount" },
+            { key: "paid", label: "Paid" },
+            { key: "billed", label: "Billed" },
+            { key: "allowed", label: "Allowed" },
             { key: "status", label: "Status" },
             { key: "method", label: "Method" },
             { key: "created", label: "Created" },
@@ -124,6 +126,8 @@ export function PaymentsSection({
                 {payment.patient_name}
               </TableCell>
               <TableCell>{formatCurrency(payment.amount)}</TableCell>
+              <TableCell>{formatCurrency(payment.billed_amount)}</TableCell>
+              <TableCell>{formatCurrency(payment.allowed_amount)}</TableCell>
               <TableCell>
                 <StatusBadge status={payment.status} />
               </TableCell>
@@ -156,6 +160,14 @@ export function PaymentsSection({
                   </div>
                   <div>
                     <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      Billed / Allowed
+                    </p>
+                    <p className="mt-1 font-medium text-foreground">
+                      {formatCurrency(payment.billed_amount)} / {formatCurrency(payment.allowed_amount)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                       Method
                     </p>
                     <p className="mt-1 font-medium text-foreground">
@@ -167,7 +179,7 @@ export function PaymentsSection({
             </AppCard>
           )}
           emptyMessage="No payment links generated yet."
-          emptyDetail="Create a demo payment link to let your team simulate checkout outcomes and reconciliation."
+          emptyDetail="Create a payment link to collect funds and compare actual payments against billed and allowed totals."
           emptyAction={
             <Button type="button" onClick={() => setIsSheetOpen(true)}>
               <BadgeDollarSign className="size-4" />
@@ -185,7 +197,7 @@ export function PaymentsSection({
           <SheetHeader className="pb-0">
             <SheetTitle className="font-heading text-2xl">Create payment link</SheetTitle>
             <SheetDescription>
-              Generate an internal demo checkout URL for patient payment walkthroughs.
+              Generate an internal payment link for patient balance collection.
             </SheetDescription>
           </SheetHeader>
 

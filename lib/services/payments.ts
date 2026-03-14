@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { ensureStatementForClaim } from "@/lib/services/statements";
 import type { Database } from "@/types/database";
 
 type UserProfile = Database["public"]["Tables"]["users"]["Row"];
@@ -11,6 +12,9 @@ type PaymentPatientLookup = Pick<
 
 export type PaymentSummary = PaymentRow & {
   patient_name: string;
+  billed_amount: number;
+  allowed_amount: number;
+  variance_amount: number;
 };
 
 function formatPatientName(firstName: string, lastName: string) {
@@ -21,7 +25,7 @@ export async function listPayments(
   supabase: SupabaseClient<Database>,
   profile: UserProfile
 ) {
-  const [paymentsResult, patientsResult] = await Promise.all([
+  const [paymentsResult, patientsResult, claimsResult, proceduresResult] = await Promise.all([
     supabase
       .from("payments")
       .select("*")
@@ -31,9 +35,16 @@ export async function listPayments(
       .from("patients")
       .select("id, first_name, last_name")
       .eq("org_id", profile.org_id),
+    supabase.from("claims").select("id, total_amount").eq("org_id", profile.org_id),
+    supabase.from("procedures").select("claim_id, allowed_amount").eq("org_id", profile.org_id),
   ]);
 
-  if (paymentsResult.error || patientsResult.error) {
+  if (
+    paymentsResult.error ||
+    patientsResult.error ||
+    claimsResult.error ||
+    proceduresResult.error
+  ) {
     throw new Error("Unable to load payments.");
   }
 
@@ -46,10 +57,32 @@ export async function listPayments(
       formatPatientName(patient.first_name, patient.last_name),
     ])
   );
+  const claimMap = new Map(
+    ((claimsResult.data ?? []) as Array<{ id: string; total_amount: number }>).map((claim) => [
+      claim.id,
+      claim.total_amount,
+    ])
+  );
+  const allowedMap = new Map<string, number>();
+
+  for (const procedure of (proceduresResult.data ?? []) as Array<{
+    claim_id: string;
+    allowed_amount: number;
+  }>) {
+    allowedMap.set(
+      procedure.claim_id,
+      (allowedMap.get(procedure.claim_id) ?? 0) + procedure.allowed_amount
+    );
+  }
 
   return payments.map((payment) => ({
     ...payment,
     patient_name: patientMap.get(payment.patient_id) ?? "Unknown patient",
+    billed_amount: payment.claim_id ? claimMap.get(payment.claim_id) ?? payment.amount : payment.amount,
+    allowed_amount: payment.claim_id ? allowedMap.get(payment.claim_id) ?? 0 : 0,
+    variance_amount:
+      payment.amount -
+      (payment.claim_id ? allowedMap.get(payment.claim_id) ?? payment.amount : payment.amount),
   }));
 }
 
@@ -66,7 +99,7 @@ export async function createCheckoutPaymentLink(
 ) {
   const { data: patient, error: patientError } = await supabase
     .from("patients")
-    .select("id, first_name, last_name")
+    .select("id, first_name, last_name, location_id")
     .eq("id", input.patient_id)
     .eq("org_id", profile.org_id)
     .maybeSingle();
@@ -95,6 +128,7 @@ export async function createCheckoutPaymentLink(
     .from("payments")
     .insert({
       org_id: profile.org_id,
+      location_id: (typedPatient as PaymentPatientLookup & { location_id?: string | null }).location_id ?? null,
       claim_id: input.claim_id,
       patient_id: input.patient_id,
       amount: Number(input.amount.toFixed(2)),
@@ -148,17 +182,25 @@ export async function simulatePaymentStatus(
   const typedPayment = payment as PaymentRow;
 
   if (typedPayment.claim_id && status === "succeeded") {
-    const { error: claimError } = await supabase
-      .from("claims")
-      .update({
-        status: "paid",
-        paid_at: nextTimestamp,
-      })
-      .eq("id", typedPayment.claim_id)
-      .eq("org_id", profile.org_id);
+    const statement = await ensureStatementForClaim(
+      supabase,
+      profile,
+      typedPayment.claim_id
+    );
 
-    if (claimError) {
-      throw new Error(claimError.message);
+    if (!statement) {
+      const { error: claimError } = await supabase
+        .from("claims")
+        .update({
+          status: "paid",
+          paid_at: nextTimestamp,
+        })
+        .eq("id", typedPayment.claim_id)
+        .eq("org_id", profile.org_id);
+
+      if (claimError) {
+        throw new Error(claimError.message);
+      }
     }
   }
 
