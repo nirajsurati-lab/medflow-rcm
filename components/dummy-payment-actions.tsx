@@ -17,7 +17,7 @@ export function DummyPaymentActions({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSimulation(status: "paid" | "cancelled") {
+  async function handleSimulation(status: "succeeded" | "voided") {
     setIsSubmitting(true);
     setError(null);
 
@@ -42,7 +42,7 @@ export function DummyPaymentActions({
       }
 
       router.push(
-        `/?tab=payments&status=${status === "paid" ? "success" : "cancelled"}`
+        `/?tab=payments&status=${status === "succeeded" ? "success" : "cancelled"}`
       );
       router.refresh();
     } catch (simulationError) {
@@ -68,7 +68,7 @@ export function DummyPaymentActions({
       <div className="flex flex-wrap gap-3">
         <Button
           type="button"
-          onClick={() => handleSimulation("paid")}
+          onClick={() => handleSimulation("succeeded")}
           disabled={isSubmitting}
         >
           Simulate success
@@ -76,7 +76,7 @@ export function DummyPaymentActions({
         <Button
           type="button"
           variant="outline"
-          onClick={() => handleSimulation("cancelled")}
+          onClick={() => handleSimulation("voided")}
           disabled={isSubmitting}
         >
           Simulate cancellation

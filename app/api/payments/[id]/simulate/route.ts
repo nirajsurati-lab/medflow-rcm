@@ -26,7 +26,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       }
     | null;
 
-  if (body?.status !== "paid" && body?.status !== "cancelled") {
+  if (body?.status !== "succeeded" && body?.status !== "voided") {
     return NextResponse.json(
       { error: "Invalid payment simulation status." },
       { status: 400 }

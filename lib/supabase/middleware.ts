@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseConfigStatus, getSupabaseEnvOrThrow } from "@/lib/supabase/config";
 import type { Database } from "@/types/database";
 
-const PUBLIC_PATHS = new Set(["/login"]);
+const PUBLIC_PATHS = new Set(["/login", "/signup"]);
 
 function copyCookies(source: NextResponse, target: NextResponse) {
   source.cookies.getAll().forEach((cookie) => {

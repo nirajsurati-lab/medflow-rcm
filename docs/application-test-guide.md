@@ -2,16 +2,19 @@
 
 This guide walks through the whole MedFlow Pro MVP so you can test it quickly.
 
-## 1. Login
+## 1. Signup Or Login
 
 Page:
 
 - `/login`
+- `/signup`
 
 What to do:
 
-1. Sign in using the Supabase user you created earlier.
-2. Confirm you land on the main workspace.
+1. If you do not have an account yet, open `/signup`.
+2. Create a new organization admin workspace.
+3. After redirect, sign in using that email and password on `/login`.
+4. Confirm you land on the main workspace.
 
 Expected result:
 
@@ -113,7 +116,7 @@ Pages involved:
 Expected result:
 
 - A pending payment row is created first.
-- Simulated success updates payment status to `paid`.
+- Simulated success updates payment status to `completed`.
 - If linked to a claim, the claim status becomes `paid`.
 - Simulated cancellation updates the payment status to `cancelled`.
 
@@ -158,14 +161,15 @@ Expected result:
 Use this order for the fastest end-to-end demo:
 
 1. Login.
-2. Show `Dashboard`.
-3. Create a patient in `Patients`.
-4. Add provider and payer in `Claims`.
-5. Create and submit a claim.
-6. Generate a demo payment link in `Payments`.
-7. Simulate payment success.
-8. Log a denial on another claim if needed.
-9. Show `Audit` as admin.
+2. If needed, show the `/signup` bootstrap flow.
+3. Show `Dashboard`.
+4. Create a patient in `Patients`.
+5. Add provider and payer in `Claims`.
+6. Create and submit a claim.
+7. Generate a demo payment link in `Payments`.
+8. Simulate payment success.
+9. Log a denial on another claim if needed.
+10. Show `Audit` as admin.
 
 ## If Something Fails
 

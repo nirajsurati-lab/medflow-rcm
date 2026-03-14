@@ -17,8 +17,9 @@ Phase 1 sets up:
 2. Fill in your Supabase project URL and anon key.
 3. Apply the SQL files in `supabase/migrations/` in timestamp order.
 4. In the Supabase dashboard under `Authentication -> Auth Hooks`, set the `Custom Access Token` hook to `public.custom_access_token_hook`.
-5. Create an organization row, then create auth users with `org_id` and `role` in app metadata.
+5. Add `SUPABASE_SERVICE_ROLE_KEY` if you want to use the in-app signup/bootstrap flow.
 6. Start the app with `npm run dev`.
+7. Use `/signup` to create a new demo organization admin, or sign in at `/login` with an existing staff user.
 
 ## Payments
 
@@ -53,3 +54,11 @@ Each auth user also needs a matching `public.users` row with an `org_id`. The mi
 ```
 
 `first_name` and `last_name` can be passed in `user_metadata`.
+
+For hackathon speed, the app now also includes a `/signup` bootstrap page that creates:
+
+- one new `organizations` row
+- one new `auth.users` account
+- one matching `public.users` admin profile
+
+That signup flow requires `SUPABASE_SERVICE_ROLE_KEY` on the server.

@@ -24,6 +24,7 @@ export type InternalRequestContext = AuthorizedContext | UnauthorizedContext;
 
 export async function getInternalRequestContext(): Promise<InternalRequestContext> {
   const sessionSupabase = await createServerSupabaseClient();
+  const adminSupabase = createAdminSupabaseClient();
   const {
     data: { user },
     error,
@@ -45,8 +46,6 @@ export async function getInternalRequestContext(): Promise<InternalRequestContex
   let typedProfile = (profile ?? null) as UserProfile | null;
 
   if (!typedProfile) {
-    const adminSupabase = createAdminSupabaseClient();
-
     if (adminSupabase) {
       const { data: adminProfile } = await adminSupabase
         .from("users")
@@ -58,10 +57,11 @@ export async function getInternalRequestContext(): Promise<InternalRequestContex
     }
   }
 
-  if (profileError || !typedProfile) {
+  if (!typedProfile) {
     return {
       ok: false,
-      error: "User profile is missing.",
+      error:
+        profileError?.message ?? "User profile is missing.",
       status: 403,
     };
   }
@@ -74,7 +74,10 @@ export async function getInternalRequestContext(): Promise<InternalRequestContex
     };
   }
 
-  const databaseSupabase = createAdminSupabaseClient() ?? sessionSupabase;
+  // Temporary compatibility path while the live Supabase RLS helpers
+  // are still unstable. Every feature service continues to scope queries
+  // by `profile.org_id`, so org isolation remains explicit in code.
+  const databaseSupabase = adminSupabase ?? sessionSupabase;
 
   return {
     ok: true,

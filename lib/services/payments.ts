@@ -98,7 +98,7 @@ export async function createCheckoutPaymentLink(
       claim_id: input.claim_id,
       patient_id: input.patient_id,
       amount: Number(input.amount.toFixed(2)),
-      method: "demo",
+      method: "other",
       stripe_id: null,
       status: "pending",
     })
@@ -127,9 +127,9 @@ export async function simulatePaymentStatus(
   supabase: SupabaseClient<Database>,
   profile: UserProfile,
   id: string,
-  status: "paid" | "cancelled"
+  status: "succeeded" | "voided"
 ) {
-  const nextTimestamp = status === "paid" ? new Date().toISOString() : null;
+  const nextTimestamp = status === "succeeded" ? new Date().toISOString() : null;
   const { data: payment, error: paymentError } = await supabase
     .from("payments")
     .update({
@@ -147,21 +147,13 @@ export async function simulatePaymentStatus(
 
   const typedPayment = payment as PaymentRow;
 
-  if (typedPayment.claim_id) {
-    const claimUpdates =
-      status === "paid"
-        ? {
-            status: "paid",
-            paid_at: nextTimestamp,
-          }
-        : {
-            status: "submitted",
-            paid_at: null,
-          };
-
+  if (typedPayment.claim_id && status === "succeeded") {
     const { error: claimError } = await supabase
       .from("claims")
-      .update(claimUpdates)
+      .update({
+        status: "paid",
+        paid_at: nextTimestamp,
+      })
       .eq("id", typedPayment.claim_id)
       .eq("org_id", profile.org_id);
 

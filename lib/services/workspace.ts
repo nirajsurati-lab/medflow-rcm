@@ -1,6 +1,6 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { listAuditLogs, type AuditLogSummary } from "@/lib/services/audit-logs";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { listClaims, type ClaimSummary } from "@/lib/services/claims";
 import { listDenials, type DenialSummary } from "@/lib/services/denials";
 import { listPayers, listProviders } from "@/lib/services/lookups";
@@ -99,7 +99,9 @@ function buildDashboardSummary(
   const openClaims = claims.filter((claim) => claim.status !== "paid");
   const submittedClaims = claims.filter((claim) => claim.status === "submitted");
   const deniedClaims = claims.filter((claim) => claim.status === "denied");
-  const paidPayments = payments.filter((payment) => payment.status === "paid");
+  const paidPayments = payments.filter(
+    (payment) => payment.status === "succeeded"
+  );
 
   const totalOutstandingAR = openClaims.reduce(
     (sum, claim) => sum + claim.total_amount,
@@ -164,7 +166,7 @@ function buildDashboardSummary(
         label: "Patient Payments",
         value: totalPatientPayments,
         kind: "currency",
-        helper: `${paidPayments.length} demo payments marked paid`,
+        helper: `${paidPayments.length} demo payments completed`,
       },
     ],
     aging_buckets: agingBuckets,
@@ -173,10 +175,9 @@ function buildDashboardSummary(
 }
 
 export async function getPhaseTwoWorkspaceData(
+  supabase: SupabaseClient<Database>,
   profile: UserProfile
 ): Promise<PhaseTwoWorkspaceData> {
-  const supabase =
-    createAdminSupabaseClient() ?? (await createServerSupabaseClient());
   const [patients, providers, payers, claims, denials, payments, auditLogs] =
     await Promise.all([
       listPatients(supabase, profile),

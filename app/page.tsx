@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Activity, DatabaseZap, ShieldCheck, UserRound } from "lucide-react";
 
 import { logoutAction } from "@/app/actions/logout";
+import { PageHeader } from "@/components/system/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { PhaseTwoWorkspace } from "@/components/phase-two-workspace";
@@ -14,10 +15,12 @@ import {
 } from "@/components/ui/card";
 import { getCurrentUserContext } from "@/lib/auth/session";
 import { getPhaseTwoWorkspaceData } from "@/lib/services/workspace";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import {
   SUPABASE_PUBLIC_ENV_KEYS,
   getSupabaseConfigStatus,
 } from "@/lib/supabase/config";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -51,62 +54,61 @@ export default async function Home({ searchParams }: HomeProps) {
     return (
       <main className="min-h-screen bg-[linear-gradient(180deg,#f8fbff_0%,#fdf8f3_100%)] px-6 py-10">
         <div className="mx-auto max-w-4xl space-y-6">
-          <Card className="border-white/80 bg-white/85 shadow-lg shadow-slate-200/70 backdrop-blur">
-            <CardHeader>
-              <CardTitle className="text-3xl text-slate-950">
-                MedFlow Pro is scaffolded and waiting for Supabase
-              </CardTitle>
-              <CardDescription className="leading-6">
-                Add your environment variables, run the migrations, and the
-                login screen will be ready to use.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Alert>
-                <AlertTitle>Missing environment variables</AlertTitle>
-                <AlertDescription>
-                  Add the following keys to `.env.local`:{" "}
-                  {SUPABASE_PUBLIC_ENV_KEYS.join(", ")}.
-                </AlertDescription>
-              </Alert>
+          <PageHeader
+            eyebrow="Setup Required"
+            title="MedFlow Pro is scaffolded and waiting for Supabase"
+            description="Add your environment variables, run the migrations, and the login screen will be ready to use."
+            stats={[
+              {
+                label: "Missing env",
+                value: SUPABASE_PUBLIC_ENV_KEYS.join(", "),
+              },
+            ]}
+          />
 
-              <div className="grid gap-4 md:grid-cols-3">
-                <Card size="sm" className="border border-slate-200/70 bg-slate-50">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <DatabaseZap className="size-4 text-sky-700" />
-                      Schema
-                    </CardTitle>
-                    <CardDescription>
-                      Apply the SQL files in `supabase/migrations/`.
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-                <Card size="sm" className="border border-slate-200/70 bg-slate-50">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <ShieldCheck className="size-4 text-emerald-700" />
-                      Auth hook
-                    </CardTitle>
-                    <CardDescription>
-                      Set the Supabase custom access token hook.
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-                <Card size="sm" className="border border-slate-200/70 bg-slate-50">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <UserRound className="size-4 text-amber-700" />
-                      Users
-                    </CardTitle>
-                    <CardDescription>
-                      Provision an org and at least one admin user.
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-              </div>
-            </CardContent>
-          </Card>
+          <Alert>
+            <AlertTitle>Missing environment variables</AlertTitle>
+            <AlertDescription>
+              Add the following keys to `.env.local`:{" "}
+              {SUPABASE_PUBLIC_ENV_KEYS.join(", ")}.
+            </AlertDescription>
+          </Alert>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card size="sm" className="border border-slate-200/70 bg-slate-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DatabaseZap className="size-4 text-sky-700" />
+                  Schema
+                </CardTitle>
+                <CardDescription>
+                  Apply the SQL files in `supabase/migrations/`.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            <Card size="sm" className="border border-slate-200/70 bg-slate-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldCheck className="size-4 text-emerald-700" />
+                  Auth hook
+                </CardTitle>
+                <CardDescription>
+                  Set the Supabase custom access token hook.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            <Card size="sm" className="border border-slate-200/70 bg-slate-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UserRound className="size-4 text-amber-700" />
+                  Users
+                </CardTitle>
+                <CardDescription>
+                  Provision an org and at least one admin user.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
         </div>
       </main>
     );
@@ -121,29 +123,45 @@ export default async function Home({ searchParams }: HomeProps) {
   const { authUser, organization, profile } = userContext;
   const sanitizedInitialTab =
     params?.tab === "audit" && profile?.role !== "admin" ? "dashboard" : initialTab;
-  const workspaceData = profile ? await getPhaseTwoWorkspaceData(profile) : null;
+  const workspaceSupabase =
+    createAdminSupabaseClient() ?? (await createServerSupabaseClient());
+  const workspaceData = profile
+    ? await getPhaseTwoWorkspaceData(workspaceSupabase, profile)
+    : null;
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f3faf8_0%,#f7fbff_45%,#fdf8f3_100%)] px-6 py-8">
       <div className="mx-auto max-w-6xl space-y-6">
-        <Card className="border-white/80 bg-white/85 shadow-lg shadow-slate-200/70 backdrop-blur">
-          <CardHeader className="gap-3 md:flex md:flex-row md:items-start md:justify-between">
-            <div className="space-y-2">
-              <CardTitle className="text-3xl text-slate-950">
-                MedFlow Pro Phase 3 workspace
-              </CardTitle>
-              <CardDescription className="max-w-2xl leading-6">
-                KPI reporting, A/R aging visibility, and a claims follow-up queue
-                now sit on top of the manual billing workflows from Phase 2.
-              </CardDescription>
-            </div>
+        <PageHeader
+          eyebrow="Operations Workspace"
+          title="MedFlow Pro Phase 4 workspace"
+          description="Manual billing workflows, KPI reporting, demo payments, and admin audit visibility now live together in one operations workspace."
+          stats={[
+            {
+              label: "Organization",
+              value: organization?.name ?? "Unknown organization",
+            },
+            {
+              label: "User",
+              value: authUser.email ?? "No email returned",
+            },
+            ...(profile
+              ? [
+                  {
+                    label: "Role",
+                    value: profile.role,
+                  },
+                ]
+              : []),
+          ]}
+          action={
             <form action={logoutAction}>
               <Button variant="outline" type="submit">
                 Sign out
               </Button>
             </form>
-          </CardHeader>
-        </Card>
+          }
+        />
 
         {!profile ? (
           <Alert variant="destructive">
