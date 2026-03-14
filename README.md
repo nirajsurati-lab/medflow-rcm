@@ -1,6 +1,6 @@
 # MedFlow Pro
 
-MedFlow Pro is a manual-entry medical billing MVP built with Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui, Supabase, and Stripe.
+MedFlow Pro is a manual-entry medical billing MVP built with Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui, Supabase, and a dummy payment-link flow for demos.
 
 ## Phase 1 Status
 
@@ -19,6 +19,10 @@ Phase 1 sets up:
 4. In the Supabase dashboard under `Authentication -> Auth Hooks`, set the `Custom Access Token` hook to `public.custom_access_token_hook`.
 5. Create an organization row, then create auth users with `org_id` and `role` in app metadata.
 6. Start the app with `npm run dev`.
+
+## Payments
+
+Phase 2 uses an internal demo payment page so the project can be shown without any gateway onboarding or verification.
 
 ## Scripts
 
