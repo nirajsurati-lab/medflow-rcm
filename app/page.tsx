@@ -121,7 +121,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const { authUser, organization, profile } = userContext;
   const sanitizedInitialTab =
     params?.tab === "audit" && profile?.role !== "admin" ? "dashboard" : initialTab;
-  const workspaceData = profile ? await getPhaseTwoWorkspaceData(profile.role) : null;
+  const workspaceData = profile ? await getPhaseTwoWorkspaceData(profile) : null;
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f3faf8_0%,#f7fbff_45%,#fdf8f3_100%)] px-6 py-8">

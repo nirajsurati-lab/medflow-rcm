@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/types/database";
 
 type AuditLogRow = Database["public"]["Tables"]["audit_logs"]["Row"];
+type UserProfile = Database["public"]["Tables"]["users"]["Row"];
 type UserLookup = Pick<
   Database["public"]["Tables"]["users"]["Row"],
   "id" | "email" | "first_name" | "last_name"
@@ -76,11 +77,13 @@ function buildSummary(log: AuditLogRow, changedFields: string[]) {
 
 export async function listAuditLogs(
   supabase: SupabaseClient<Database>,
+  profile: UserProfile,
   limit = 50
 ) {
   const { data, error } = await supabase
     .from("audit_logs")
     .select("*")
+    .eq("org_id", profile.org_id)
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -103,6 +106,7 @@ export async function listAuditLogs(
     const { data: users, error: usersError } = await supabase
       .from("users")
       .select("id, email, first_name, last_name")
+      .eq("org_id", profile.org_id)
       .in("id", userIds);
 
     if (usersError) {

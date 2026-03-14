@@ -13,7 +13,7 @@ export async function GET() {
   }
 
   try {
-    const denials = await listDenials(context.supabase);
+    const denials = await listDenials(context.supabase, context.profile);
     return NextResponse.json({ data: denials }, { status: 200 });
   } catch (error) {
     return apiErrorResponse(error, "Unable to load denials.");

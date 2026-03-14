@@ -1,6 +1,7 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 import { isInternalRole } from "@/lib/auth/roles";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
@@ -22,11 +23,11 @@ type UnauthorizedContext = {
 export type InternalRequestContext = AuthorizedContext | UnauthorizedContext;
 
 export async function getInternalRequestContext(): Promise<InternalRequestContext> {
-  const supabase = await createServerSupabaseClient();
+  const sessionSupabase = await createServerSupabaseClient();
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser();
+  } = await sessionSupabase.auth.getUser();
 
   if (error || !user) {
     return {
@@ -36,12 +37,26 @@ export async function getInternalRequestContext(): Promise<InternalRequestContex
     };
   }
 
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile, error: profileError } = await sessionSupabase
     .from("users")
     .select("*")
     .eq("id", user.id)
     .maybeSingle();
-  const typedProfile = (profile ?? null) as UserProfile | null;
+  let typedProfile = (profile ?? null) as UserProfile | null;
+
+  if (!typedProfile) {
+    const adminSupabase = createAdminSupabaseClient();
+
+    if (adminSupabase) {
+      const { data: adminProfile } = await adminSupabase
+        .from("users")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      typedProfile = (adminProfile ?? null) as UserProfile | null;
+    }
+  }
 
   if (profileError || !typedProfile) {
     return {
@@ -59,10 +74,12 @@ export async function getInternalRequestContext(): Promise<InternalRequestContex
     };
   }
 
+  const databaseSupabase = createAdminSupabaseClient() ?? sessionSupabase;
+
   return {
     ok: true,
     authUser: user,
     profile: typedProfile,
-    supabase,
+    supabase: databaseSupabase,
   };
 }

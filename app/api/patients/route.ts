@@ -13,7 +13,7 @@ export async function GET() {
   }
 
   try {
-    const patients = await listPatients(context.supabase);
+    const patients = await listPatients(context.supabase, context.profile);
     return NextResponse.json({ data: patients }, { status: 200 });
   } catch (error) {
     return NextResponse.json(

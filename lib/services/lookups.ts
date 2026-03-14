@@ -8,10 +8,14 @@ type PayerInsert = Database["public"]["Tables"]["payers"]["Insert"];
 type ProviderRow = Database["public"]["Tables"]["providers"]["Row"];
 type PayerRow = Database["public"]["Tables"]["payers"]["Row"];
 
-export async function listProviders(supabase: SupabaseClient<Database>) {
+export async function listProviders(
+  supabase: SupabaseClient<Database>,
+  profile: UserProfile
+) {
   const { data, error } = await supabase
     .from("providers")
     .select("*")
+    .eq("org_id", profile.org_id)
     .order("last_name", { ascending: true });
 
   if (error) {
@@ -21,10 +25,14 @@ export async function listProviders(supabase: SupabaseClient<Database>) {
   return (data ?? []) as ProviderRow[];
 }
 
-export async function listPayers(supabase: SupabaseClient<Database>) {
+export async function listPayers(
+  supabase: SupabaseClient<Database>,
+  profile: UserProfile
+) {
   const { data, error } = await supabase
     .from("payers")
     .select("*")
+    .eq("org_id", profile.org_id)
     .order("name", { ascending: true });
 
   if (error) {

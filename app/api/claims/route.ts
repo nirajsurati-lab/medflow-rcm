@@ -13,7 +13,7 @@ export async function GET() {
   }
 
   try {
-    const claims = await listClaims(context.supabase);
+    const claims = await listClaims(context.supabase, context.profile);
     return NextResponse.json({ data: claims }, { status: 200 });
   } catch (error) {
     return apiErrorResponse(error, "Unable to load claims.");

@@ -27,7 +27,11 @@ export async function GET(_: NextRequest, context: RouteContext) {
 
   try {
     const { id } = await context.params;
-    const patient = await getPatientById(authContext.supabase, id);
+    const patient = await getPatientById(
+      authContext.supabase,
+      authContext.profile,
+      id
+    );
     return NextResponse.json({ data: patient }, { status: 200 });
   } catch (error) {
     return apiErrorResponse(error, "Unable to load patient.");
@@ -53,7 +57,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   try {
     const { id } = await context.params;
-    const patient = await updatePatient(authContext.supabase, id, parsed.data);
+    const patient = await updatePatient(
+      authContext.supabase,
+      authContext.profile,
+      id,
+      parsed.data
+    );
     return NextResponse.json({ data: patient }, { status: 200 });
   } catch (error) {
     return apiErrorResponse(error, "Unable to update patient.");
@@ -72,7 +81,7 @@ export async function DELETE(_: NextRequest, context: RouteContext) {
 
   try {
     const { id } = await context.params;
-    await deletePatient(authContext.supabase, id);
+    await deletePatient(authContext.supabase, authContext.profile, id);
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     return apiErrorResponse(error, "Unable to delete patient.");

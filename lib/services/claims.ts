@@ -30,16 +30,26 @@ function formatPersonName(firstName: string, lastName: string) {
   return `${firstName} ${lastName}`.trim();
 }
 
-export async function listClaims(supabase: SupabaseClient<Database>) {
+export async function listClaims(
+  supabase: SupabaseClient<Database>,
+  profile: UserProfile
+) {
   const [claimsResult, patientsResult, providersResult, payersResult] =
     await Promise.all([
       supabase
         .from("claims")
         .select("*")
+        .eq("org_id", profile.org_id)
         .order("created_at", { ascending: false }),
-      supabase.from("patients").select("id, first_name, last_name"),
-      supabase.from("providers").select("id, first_name, last_name"),
-      supabase.from("payers").select("id, name"),
+      supabase
+        .from("patients")
+        .select("id, first_name, last_name")
+        .eq("org_id", profile.org_id),
+      supabase
+        .from("providers")
+        .select("id, first_name, last_name")
+        .eq("org_id", profile.org_id),
+      supabase.from("payers").select("id, name").eq("org_id", profile.org_id),
     ]);
 
   if (claimsResult.error) {
@@ -98,6 +108,31 @@ export async function createClaim(
     }>;
   }
 ) {
+  const [patientResult, providerResult, payerResult] = await Promise.all([
+    supabase
+      .from("patients")
+      .select("id")
+      .eq("id", input.patient_id)
+      .eq("org_id", profile.org_id)
+      .maybeSingle(),
+    supabase
+      .from("providers")
+      .select("id")
+      .eq("id", input.provider_id)
+      .eq("org_id", profile.org_id)
+      .maybeSingle(),
+    supabase
+      .from("payers")
+      .select("id")
+      .eq("id", input.payer_id)
+      .eq("org_id", profile.org_id)
+      .maybeSingle(),
+  ]);
+
+  if (!patientResult.data || !providerResult.data || !payerResult.data) {
+    throw new Error("Patient, provider, or payer not found for this organization.");
+  }
+
   const totalAmount = input.procedures.reduce(
     (sum, procedure) => sum + procedure.charge_amount * procedure.units,
     0
@@ -144,7 +179,11 @@ export async function createClaim(
     .insert(diagnosesPayload);
 
   if (proceduresError || diagnosesError) {
-    await supabase.from("claims").delete().eq("id", typedClaim.id);
+    await supabase
+      .from("claims")
+      .delete()
+      .eq("id", typedClaim.id)
+      .eq("org_id", profile.org_id);
 
     throw new Error(
       proceduresError?.message ?? diagnosesError?.message ?? "Unable to create claim lines."
@@ -156,6 +195,7 @@ export async function createClaim(
 
 export async function submitClaim(
   supabase: SupabaseClient<Database>,
+  profile: UserProfile,
   id: string
 ) {
   const { data, error } = await supabase
@@ -165,6 +205,7 @@ export async function submitClaim(
       submitted_at: new Date().toISOString(),
     })
     .eq("id", id)
+    .eq("org_id", profile.org_id)
     .select("*")
     .single();
 

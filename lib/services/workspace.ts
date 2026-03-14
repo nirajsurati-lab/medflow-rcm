@@ -1,10 +1,14 @@
 import { listAuditLogs, type AuditLogSummary } from "@/lib/services/audit-logs";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { listClaims, type ClaimSummary } from "@/lib/services/claims";
 import { listDenials, type DenialSummary } from "@/lib/services/denials";
 import { listPayers, listProviders } from "@/lib/services/lookups";
 import { listPatients } from "@/lib/services/patients";
 import { listPayments, type PaymentSummary } from "@/lib/services/payments";
+import type { Database } from "@/types/database";
+
+type UserProfile = Database["public"]["Tables"]["users"]["Row"];
 
 export type DashboardKpi = {
   label: string;
@@ -169,18 +173,21 @@ function buildDashboardSummary(
 }
 
 export async function getPhaseTwoWorkspaceData(
-  role: string
+  profile: UserProfile
 ): Promise<PhaseTwoWorkspaceData> {
-  const supabase = await createServerSupabaseClient();
+  const supabase =
+    createAdminSupabaseClient() ?? (await createServerSupabaseClient());
   const [patients, providers, payers, claims, denials, payments, auditLogs] =
     await Promise.all([
-      listPatients(supabase),
-      listProviders(supabase),
-      listPayers(supabase),
-      listClaims(supabase),
-      listDenials(supabase),
-      listPayments(supabase),
-      role === "admin" ? listAuditLogs(supabase) : Promise.resolve([]),
+      listPatients(supabase, profile),
+      listProviders(supabase, profile),
+      listPayers(supabase, profile),
+      listClaims(supabase, profile),
+      listDenials(supabase, profile),
+      listPayments(supabase, profile),
+      profile.role === "admin"
+        ? listAuditLogs(supabase, profile)
+        : Promise.resolve([]),
     ]);
   const dashboard = buildDashboardSummary(claims, payments, denials);
 

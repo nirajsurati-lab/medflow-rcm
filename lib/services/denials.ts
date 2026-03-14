@@ -13,13 +13,20 @@ export type DenialSummary = DenialRow & {
   claim_status: string;
 };
 
-export async function listDenials(supabase: SupabaseClient<Database>) {
+export async function listDenials(
+  supabase: SupabaseClient<Database>,
+  profile: UserProfile
+) {
   const [denialsResult, claimsResult] = await Promise.all([
     supabase
       .from("denials")
       .select("*")
+      .eq("org_id", profile.org_id)
       .order("created_at", { ascending: false }),
-    supabase.from("claims").select("id, status"),
+    supabase
+      .from("claims")
+      .select("id, status")
+      .eq("org_id", profile.org_id),
   ]);
 
   if (denialsResult.error || claimsResult.error) {
@@ -53,6 +60,7 @@ export async function createDenial(
     .from("claims")
     .select("id")
     .eq("id", input.claim_id)
+    .eq("org_id", profile.org_id)
     .maybeSingle();
 
   if (claimError || !claim) {
@@ -81,7 +89,8 @@ export async function createDenial(
     .update({
       status: "denied",
     })
-    .eq("id", input.claim_id);
+    .eq("id", input.claim_id)
+    .eq("org_id", profile.org_id);
 
   if (claimUpdateError) {
     throw new Error(claimUpdateError.message);

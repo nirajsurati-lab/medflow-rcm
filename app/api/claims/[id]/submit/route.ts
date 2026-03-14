@@ -22,7 +22,11 @@ export async function PATCH(_: NextRequest, context: RouteContext) {
 
   try {
     const { id } = await context.params;
-    const claim = await submitClaim(authContext.supabase, id);
+    const claim = await submitClaim(
+      authContext.supabase,
+      authContext.profile,
+      id
+    );
     return NextResponse.json({ data: claim }, { status: 200 });
   } catch (error) {
     return apiErrorResponse(error, "Unable to submit claim.");

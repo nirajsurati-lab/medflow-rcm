@@ -17,13 +17,20 @@ function formatPatientName(firstName: string, lastName: string) {
   return `${firstName} ${lastName}`.trim();
 }
 
-export async function listPayments(supabase: SupabaseClient<Database>) {
+export async function listPayments(
+  supabase: SupabaseClient<Database>,
+  profile: UserProfile
+) {
   const [paymentsResult, patientsResult] = await Promise.all([
     supabase
       .from("payments")
       .select("*")
+      .eq("org_id", profile.org_id)
       .order("created_at", { ascending: false }),
-    supabase.from("patients").select("id, first_name, last_name"),
+    supabase
+      .from("patients")
+      .select("id, first_name, last_name")
+      .eq("org_id", profile.org_id),
   ]);
 
   if (paymentsResult.error || patientsResult.error) {
@@ -61,6 +68,7 @@ export async function createCheckoutPaymentLink(
     .from("patients")
     .select("id, first_name, last_name")
     .eq("id", input.patient_id)
+    .eq("org_id", profile.org_id)
     .maybeSingle();
 
   if (patientError || !patient) {
@@ -72,6 +80,7 @@ export async function createCheckoutPaymentLink(
       .from("claims")
       .select("id")
       .eq("id", input.claim_id)
+      .eq("org_id", profile.org_id)
       .maybeSingle();
 
     if (claimError || !claim) {
@@ -116,6 +125,7 @@ export async function createCheckoutPaymentLink(
 
 export async function simulatePaymentStatus(
   supabase: SupabaseClient<Database>,
+  profile: UserProfile,
   id: string,
   status: "paid" | "cancelled"
 ) {
@@ -127,6 +137,7 @@ export async function simulatePaymentStatus(
       received_at: nextTimestamp,
     })
     .eq("id", id)
+    .eq("org_id", profile.org_id)
     .select("*")
     .single();
 
@@ -151,7 +162,8 @@ export async function simulatePaymentStatus(
     const { error: claimError } = await supabase
       .from("claims")
       .update(claimUpdates)
-      .eq("id", typedPayment.claim_id);
+      .eq("id", typedPayment.claim_id)
+      .eq("org_id", profile.org_id);
 
     if (claimError) {
       throw new Error(claimError.message);

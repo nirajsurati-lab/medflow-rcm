@@ -16,7 +16,7 @@ export async function GET() {
   }
 
   try {
-    const auditLogs = await listAuditLogs(context.supabase);
+    const auditLogs = await listAuditLogs(context.supabase, context.profile);
     return NextResponse.json({ data: auditLogs }, { status: 200 });
   } catch (error) {
     return apiErrorResponse(error, "Unable to load audit logs.");

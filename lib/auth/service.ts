@@ -6,7 +6,7 @@ import { loginSchema } from "@/lib/validators/auth";
 type LoginFailure = {
   ok: false;
   error: string;
-  status: 400 | 401 | 403 | 500;
+  status: 400 | 401 | 500;
 };
 
 type LoginSuccess = {
@@ -40,24 +40,10 @@ export async function loginWithPassword(
     };
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from("users")
-    .select("id")
-    .eq("id", data.user.id)
-    .maybeSingle();
-
-  if (profileError || !profile) {
-    await supabase.auth.signOut();
-
-    return {
-      ok: false,
-      error:
-        "Your account is missing a MedFlow Pro staff profile. Ask an admin to provision your org and role.",
-      status: 403,
-    };
-  }
-
-  await supabase
+  // The authenticated request after redirect is the reliable place to enforce
+  // profile/RLS checks. Doing that immediately after sign-in can race the new
+  // SSR session cookies and produce false "missing profile" errors.
+  void supabase
     .from("users")
     .update({ last_login: new Date().toISOString() })
     .eq("id", data.user.id);

@@ -35,7 +35,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   try {
     const { id } = await context.params;
-    const payment = await simulatePaymentStatus(authContext.supabase, id, body.status);
+    const payment = await simulatePaymentStatus(
+      authContext.supabase,
+      authContext.profile,
+      id,
+      body.status
+    );
 
     return NextResponse.json({ data: payment }, { status: 200 });
   } catch (error) {

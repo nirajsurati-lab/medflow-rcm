@@ -9,7 +9,7 @@ as $$
   end
 $$;
 
-create or replace function public.current_role()
+create or replace function public.current_app_role()
 returns text
 language sql
 stable
@@ -22,7 +22,7 @@ returns boolean
 language sql
 stable
 as $$
-  select public.current_role() in ('admin', 'biller')
+  select public.current_app_role() in ('admin', 'biller')
 $$;
 
 create or replace function public.handle_auth_user_sync()
@@ -158,8 +158,8 @@ create policy organizations_update_admin
 on public.organizations
 for update
 to authenticated
-using (id = public.current_org_id() and public.current_role() = 'admin')
-with check (id = public.current_org_id() and public.current_role() = 'admin');
+using (id = public.current_org_id() and public.current_app_role() = 'admin')
+with check (id = public.current_org_id() and public.current_app_role() = 'admin');
 
 create policy users_select_self_or_admin
 on public.users
@@ -167,7 +167,7 @@ for select
 to authenticated
 using (
   id = auth.uid()
-  or (org_id = public.current_org_id() and public.current_role() = 'admin')
+  or (org_id = public.current_org_id() and public.current_app_role() = 'admin')
 );
 
 create policy users_update_self_or_admin
@@ -176,11 +176,11 @@ for update
 to authenticated
 using (
   id = auth.uid()
-  or (org_id = public.current_org_id() and public.current_role() = 'admin')
+  or (org_id = public.current_org_id() and public.current_app_role() = 'admin')
 )
 with check (
   id = auth.uid()
-  or (org_id = public.current_org_id() and public.current_role() = 'admin')
+  or (org_id = public.current_org_id() and public.current_app_role() = 'admin')
 );
 
 create policy users_insert_admin
@@ -189,7 +189,7 @@ for insert
 to authenticated
 with check (
   org_id = public.current_org_id()
-  and public.current_role() = 'admin'
+  and public.current_app_role() = 'admin'
 );
 
 create policy users_select_for_auth_hook
@@ -204,7 +204,7 @@ for select
 to authenticated
 using (
   org_id = public.current_org_id()
-  and public.current_role() = 'admin'
+  and public.current_app_role() = 'admin'
 );
 
 create or replace function public.log_audit_changes()

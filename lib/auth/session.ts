@@ -1,3 +1,4 @@
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
@@ -21,21 +22,51 @@ export async function getCurrentUserContext() {
     .eq("id", user.id)
     .maybeSingle<UserRow>();
 
+  let resolvedProfile = profile ?? null;
+
+  if (!resolvedProfile) {
+    const adminSupabase = createAdminSupabaseClient();
+
+    if (adminSupabase) {
+      const { data } = await adminSupabase
+        .from("users")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle<UserRow>();
+
+      resolvedProfile = data ?? null;
+    }
+  }
+
   let organization: OrganizationRow | null = null;
 
-  if (profile?.org_id) {
+  if (resolvedProfile?.org_id) {
     const { data } = await supabase
       .from("organizations")
       .select("*")
-      .eq("id", profile.org_id)
+      .eq("id", resolvedProfile.org_id)
       .maybeSingle<OrganizationRow>();
 
     organization = data ?? null;
+
+    if (!organization) {
+      const adminSupabase = createAdminSupabaseClient();
+
+      if (adminSupabase) {
+        const { data: adminOrganization } = await adminSupabase
+          .from("organizations")
+          .select("*")
+          .eq("id", resolvedProfile.org_id)
+          .maybeSingle<OrganizationRow>();
+
+        organization = adminOrganization ?? null;
+      }
+    }
   }
 
   return {
     authUser: user,
-    profile: profile ?? null,
+    profile: resolvedProfile,
     organization,
   };
 }
